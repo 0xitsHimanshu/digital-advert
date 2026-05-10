@@ -1,0 +1,43 @@
+import {
+  LexendDeca_500Medium,
+  useFonts as useLexendFonts,
+} from "@expo-google-fonts/lexend-deca";
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+} from "@expo-google-fonts/poppins";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [fontsLoaded] = useLexendFonts({
+    LexendDeca_500Medium,
+    Poppins_400Regular,
+    Poppins_500Medium,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" options={{ animation: "fade" }} />
+        <Stack.Screen name="(auth)" />
+      </Stack>
+    </SafeAreaProvider>
+  );
+}
