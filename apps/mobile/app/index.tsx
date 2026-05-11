@@ -11,6 +11,7 @@ import Svg, {
   Circle,
   Defs,
   Ellipse as SvgEllipse,
+  G,
   LinearGradient as SvgLinearGradient,
   Path,
   Stop,
@@ -25,6 +26,24 @@ const DESIGN_H = 2340;
 
 const AUTH_LOGIN = "/(auth)/login" as Href;
 
+/** Get Started sketch — Figma Group 2845 (437:811), Ellipse 27 / 28 */
+const GET_STARTED_FRAME_W = 667;
+const GET_STARTED_FRAME_H = 453;
+const CTA_SKETCH_W = 609.252;
+const CTA_SKETCH_H = 319.707;
+const CTA_SKETCH_CX = CTA_SKETCH_W / 2;
+const CTA_SKETCH_CY = CTA_SKETCH_H / 2;
+const CTA_SKETCH_LEFT = (GET_STARTED_FRAME_W - CTA_SKETCH_W) / 2;
+/** Ellipse 27 / 28 — identical bbox */
+const CTA_OVAL_RX = 594.131 / 2;
+const CTA_OVAL_RY = 139.797 / 2;
+
+/** Figma 390:489 frame — pre-rendered gradient swirl (no SVG mask) */
+const SWIRL_ARROW_COLORED = require("@/assets/images/start/swirl-arrow-colored.png");
+
+const SWIRL_W = 342.005;
+const SWIRL_H = 244.038;
+
 /**
  * Pixel-perfect layer from your Figma export: fixed 1080×2340 coordinates,
  * scaled uniformly by width so horizontal layout matches any phone width.
@@ -32,7 +51,7 @@ const AUTH_LOGIN = "/(auth)/login" as Href;
  *
  * Background rings Ellipse 23–26: teal `#1D6279` stroke gradient (4% → 0%
  * opacity) per Figma. Hero halo: Ellipse 35 fill `#FFFFE8`; Ellipse 36 dashed
- * border `#BA8900` / 4px. Arrow: Figma union path filled with accent.
+ * border `#BA8900` / 4px. CTA swirl arrow: bundled `swirl-arrow-colored.png` at Figma 390:489 placement.
  */
 export default function StartScreen() {
   const router = useRouter();
@@ -240,14 +259,13 @@ export default function StartScreen() {
           resizeMode="contain"
         />
 
-        {/* Twisted / rounded-head arrow — Figma Union (Bold / Arrows / Arrow Left Up) */}
-        <View style={styles.boldArrowsArrowLeftUp}>
-          <Svg width={67} height={67} viewBox="0 0 26.7029 26.7029">
-            <Path
-              d="M26.2684 24.1705C26.8478 24.7498 26.8478 25.6891 26.2684 26.2684C25.6891 26.8478 24.7498 26.8478 24.1705 26.2684L10.3845 12.4825L2.53249 20.3344C2.10821 20.7587 1.47013 20.8856 0.915787 20.656C0.361442 20.4264 0 19.8855 0 19.2855V1.4835C0 0.664187 0.664184 1.88636e-06 1.4835 1.88636e-06L19.2855 0C19.8855 0 20.4264 0.361442 20.656 0.915786C20.8856 1.47013 20.7587 2.10821 20.3344 2.53249L12.4825 10.3845L26.2684 24.1705Z"
-              fill={ACCENT}
-            />
-          </Svg>
+        {/* Swirl arrow above CTA — Figma 390:489 (same frame as mask build; raster asset) */}
+        <View style={styles.swirlArrowOuter} pointerEvents="none">
+          <Image
+            source={SWIRL_ARROW_COLORED}
+            style={styles.swirlArrowImage}
+            resizeMode="contain"
+          />
         </View>
 
         <Pressable
@@ -257,27 +275,42 @@ export default function StartScreen() {
           style={styles.getStartedParent}
         >
           <View pointerEvents="none" style={[styles.groupChild, styles.groupChildLayout]}>
-            <Svg
-              width={667}
-              height={453}
-              viewBox="0 0 609.252 319.707"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              <Path
-                d="M283.095 94.3425C360.912 68.5357 433.798 52.604 488.72 47.6961C516.188 45.2415 539.113 45.5487 555.898 48.7326C572.769 51.9325 583.078 57.9639 585.95 66.622C588.821 75.2802 584.158 86.277 572.543 98.9235C560.986 111.507 542.788 125.452 519.296 139.897C472.326 168.78 404.363 199.558 326.546 225.365C248.728 251.171 175.843 267.103 120.921 272.011C93.4529 274.465 70.5279 274.158 53.7421 270.974C36.8719 267.775 26.5612 261.743 23.6898 253.085C20.8185 244.427 25.4822 233.43 37.0972 220.784C48.6541 208.2 66.8526 194.255 90.344 179.81C137.315 150.927 205.277 120.149 283.095 94.3425Z"
-                fill="none"
-                stroke="#000000"
-                strokeOpacity={0.47}
-                strokeWidth={1.75845}
-              />
-              <Path
-                d="M292.886 91.895C373.676 77.9492 448.121 73.0353 503.162 76.3506C530.689 78.0087 553.313 81.7221 569.439 87.3672C585.646 93.0406 594.944 100.538 596.495 109.527C598.047 118.516 591.8 128.697 578.434 139.475C565.134 150.2 545.064 161.283 519.685 172.074C468.941 193.649 397.157 213.977 316.366 227.922C235.576 241.868 161.131 246.782 106.091 243.467C78.5632 241.809 55.9389 238.095 39.8133 232.45C23.6067 226.777 14.3077 219.279 12.756 210.29C11.2044 201.301 17.4518 191.12 30.8186 180.342C44.1185 169.618 64.1886 158.534 89.5673 147.744C140.312 126.168 212.096 105.841 292.886 91.895Z"
-                fill="none"
-                stroke="#000000"
-                strokeOpacity={0.47}
-                strokeWidth={1.75845}
-              />
-            </Svg>
+            <View style={styles.ctaSketchGroup2845}>
+              <Svg
+                width={CTA_SKETCH_W}
+                height={CTA_SKETCH_H}
+                viewBox={`0 0 ${CTA_SKETCH_W} ${CTA_SKETCH_H}`}
+              >
+                <G
+                  transform={`rotate(-4.865 ${CTA_SKETCH_CX} ${CTA_SKETCH_CY})`}
+                >
+                  <SvgEllipse
+                    cx={CTA_SKETCH_CX}
+                    cy={CTA_SKETCH_CY}
+                    rx={CTA_OVAL_RX}
+                    ry={CTA_OVAL_RY}
+                    fill="none"
+                    stroke="#000000"
+                    strokeOpacity={0.47}
+                    strokeWidth={1.75845}
+                  />
+                </G>
+                <G
+                  transform={`rotate(3.689 ${CTA_SKETCH_CX} ${CTA_SKETCH_CY})`}
+                >
+                  <SvgEllipse
+                    cx={CTA_SKETCH_CX}
+                    cy={CTA_SKETCH_CY}
+                    rx={CTA_OVAL_RX}
+                    ry={CTA_OVAL_RY}
+                    fill="none"
+                    stroke="#000000"
+                    strokeOpacity={0.47}
+                    strokeWidth={1.75845}
+                  />
+                </G>
+              </Svg>
+            </View>
           </View>
           <Text style={[styles.getStarted, styles.getStartedTypo]}>Get Started</Text>
         </Pressable>
@@ -332,9 +365,18 @@ const styles = StyleSheet.create({
   },
 
   groupChildLayout: {
-    height: 453,
-    width: 667,
+    height: GET_STARTED_FRAME_H,
+    width: GET_STARTED_FRAME_W,
     position: "absolute",
+  },
+  /** Group 2845 — 609.252×319.707, rotate 13.482°; ellipses rotate about sketch center */
+  ctaSketchGroup2845: {
+    position: "absolute",
+    top: 0,
+    left: CTA_SKETCH_LEFT,
+    width: CTA_SKETCH_W,
+    height: CTA_SKETCH_H,
+    transform: [{ rotate: "13.482deg" }],
   },
 
   ellipse23Wrap: {
@@ -475,19 +517,22 @@ const styles = StyleSheet.create({
     transform: [{ rotate: "6.5deg" }],
   },
 
+  /** Bulb — Figma mask group: 163×163, rotate −19.306° */
   maskGroupIcon2: {
-    top: 867,
-    left: 124,
-    width: 208,
-    height: 208,
     position: "absolute",
+    top: 861,
+    left: 93,
+    width: 163,
+    height: 163,
+    transform: [{ rotate: "-19.306deg" }],
   },
+  /** Globe — 118×118 (Figma mask icon frame) */
   maskGroupIcon3: {
+    position: "absolute",
     top: 957,
-    left: 709,
+    left: 685,
     width: 118,
     height: 118,
-    position: "absolute",
   },
 
   chatgptImageMay4202612: {
@@ -505,23 +550,27 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
 
-  boldArrowsArrowLeftUp: {
-    top: 538,
-    left: 154,
-    width: 67,
-    height: 67,
+  /** left: calc(50% + 81.91px), size & rotate per Figma swirl arrow layer */
+  swirlArrowOuter: {
     position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-    transform: [{ rotate: "134.41deg" }],
+    left: "50%",
+    marginLeft: 81.91,
+    top: 253.22,
+    width: SWIRL_W,
+    height: SWIRL_H,
+    transform: [{ rotate: "10.567deg" }],
+  },
+  swirlArrowImage: {
+    width: "100%",
+    height: "100%",
   },
 
   getStartedParent: {
     marginLeft: -461,
     top: 407,
     left: "50%",
-    width: 667,
-    height: 453,
+    width: GET_STARTED_FRAME_W,
+    height: GET_STARTED_FRAME_H,
     position: "absolute",
   },
   getStarted: {

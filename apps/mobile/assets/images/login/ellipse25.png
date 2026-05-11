@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 861 862" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path id="Ellipse 25" d="M430.5 65C632.289 65 796 228.793 796 431C796 633.207 632.289 797 430.5 797C228.711 797 65 633.207 65 431C65 228.793 228.711 65 430.5 65Z" stroke="url(#paint0_linear_0_4)" stroke-opacity="0.03" stroke-width="130"/>
+<defs>
+<linearGradient id="paint0_linear_0_4" x1="430.5" y1="0" x2="430.5" y2="862" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white"/>
+</linearGradient>
+</defs>
+</svg>
