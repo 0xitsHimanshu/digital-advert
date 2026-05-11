@@ -34,6 +34,10 @@ export const CONTINUE_ARROW_FRAME_LEFT = DESIGN_W * 0.8 + 17 - CONTINUE_BTN_LEFT
 /** Figma 390:178 outer frame */
 export const CONTINUE_ARROW_FRAME = 67.448;
 
+/** Figma 390:252 — Verify OTP Continue (same CTA geometry as login; lower on screen) */
+export const OTP_CONTINUE_BTN_TOP = 1669;
+export const OTP_CONTINUE_ARROW_TOP = 1707.55 - OTP_CONTINUE_BTN_TOP;
+
 const HEADER_TOP = -23;
 /** CSS bottom 68.8% on 2340px → panel height ≈752px */
 const HEADER_PANEL_HEIGHT = 752;
@@ -44,9 +48,10 @@ export const authAssets = {
   battery: require("@/assets/images/login/battery.png"),
   wifi: require("@/assets/images/login/wifi.png"),
   cellular: require("@/assets/images/login/cellular.png"),
-  continueArrow390178: require("@/assets/images/login/continue-arrow-390-178.png"),
   group2848: require("@/assets/images/login/group2848.png"),
   group2845: require("@/assets/images/login/group2845.png"),
+  /** Figma 403:519 — alpha mask for footer doodle strip */
+  otpFooterMask: require("@/assets/images/login/otp-footer-mask.png"),
 } as const;
 
 function LoginHeaderRing24() {
@@ -453,6 +458,7 @@ export const styles = StyleSheet.create({
   },
 
   continueBtn: {
+    zIndex: 2,
     position: "absolute",
     left: CONTINUE_BTN_LEFT,
     top: CONTINUE_BTN_TOP,
@@ -475,34 +481,21 @@ export const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
   },
+  /** Foreground layer above the gradient — centers the Continue text and hosts the absolute arrow. */
+  continueBtnForeground: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
   arrowWrap: {
     position: "absolute",
     left: CONTINUE_ARROW_FRAME_LEFT,
     top: CONTINUE_ARROW_TOP,
     width: CONTINUE_ARROW_FRAME,
     height: CONTINUE_ARROW_FRAME,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  arrowRotate180Outer: {
-    width: CONTINUE_ARROW_FRAME,
-    height: CONTINUE_ARROW_FRAME,
-    alignItems: "center",
-    justifyContent: "center",
-    transform: [{ rotate: "180deg" }],
-  },
-  arrowNode178Frame: {
-    width: CONTINUE_ARROW_FRAME,
-    height: CONTINUE_ARROW_FRAME,
-    position: "relative",
-  },
-  arrowGlyphAbsolute: {
-    position: "absolute",
-    top: "25%",
-    bottom: "25%",
-    left: "12.5%",
-    right: "12.5%",
-    opacity: 1,
+    /** SVG already fills the box; explicit zIndex keeps it above the gradient on Android. */
+    zIndex: 3,
   },
 
   footerPress: {
@@ -575,5 +568,150 @@ export const styles = StyleSheet.create({
     top: 1768,
     width: 26,
     height: 26,
+  },
+
+  /** Figma 390:193 / 390:256 — Verify OTP */
+  otpPanelShadow: {
+    zIndex: 1,
+    position: "absolute",
+    left: "50%",
+    marginLeft: -485.5,
+    top: 350,
+    width: 971,
+    height: 1995,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderTopLeftRadius: 100,
+    borderTopRightRadius: 100,
+  },
+  otpPanel: {
+    zIndex: 1,
+    position: "absolute",
+    left: "50%",
+    marginLeft: -540.5,
+    top: 389,
+    width: 1081,
+    height: 2093,
+    backgroundColor: "#fffdf8",
+    borderTopLeftRadius: 100,
+    borderTopRightRadius: 100,
+  },
+  /**
+   * Figma 390:223 "Page-1" — hero bounds (percentage inset).
+   * Illustration: `components/otp-page1-illustration.tsx` (477×500 viewBox SVG).
+   */
+  otpPage1Wrap: {
+    position: "absolute",
+    top: "22.44%",
+    left: "27.69%",
+    width: "44.02%",
+    height: "21.32%",
+    zIndex: 2,
+  },
+  otpPage1Svg: {
+    width: "100%",
+    height: "100%",
+  },
+  /** Figma 403:519 — masked footer strip (above artboard doodle; use zIndex in screen) */
+  otpFooterMaskOuter: {
+    position: "absolute",
+    left: -40.43,
+    top: 2030,
+    width: 1164.202,
+    height: 384,
+    overflow: "hidden",
+  },
+  otpFooterMaskFill: {
+    flex: 1,
+    backgroundColor: "rgba(17,17,17,0.08)",
+  },
+  otpFooterMaskedView: {
+    width: 1164.202,
+    height: 384,
+  },
+  otpTitle: {
+    position: "absolute",
+    zIndex: 2,
+    left: 71,
+    top: 1155,
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 49.914,
+    lineHeight: 49.914,
+    letterSpacing: -1.2478,
+    color: "#1e1e1e",
+    textTransform: "capitalize",
+  },
+  otpInstruction: {
+    position: "absolute",
+    zIndex: 2,
+    left: 71,
+    top: 1250,
+    width: 763,
+    fontFamily: "Poppins_400Regular",
+    fontSize: 39.931,
+    lineHeight: 49.914,
+    letterSpacing: -1.2478,
+    color: "#989898",
+  },
+  otpInstructionStrong: {
+    fontFamily: "Poppins_600SemiBold",
+    color: "#545454",
+  },
+  /** Figma 390:256 — 5× cells, row top 1462 */
+  otpRow: {
+    position: "absolute",
+    zIndex: 2,
+    left: (DESIGN_W - 938.79) / 2,
+    top: 1462,
+    width: 938.79,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  otpCell: {
+    width: 139.758,
+    height: 139.758,
+    borderRadius: 29.948,
+    borderWidth: 4.991,
+    backgroundColor: "#fffdf8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  otpCellEmpty: {
+    borderColor: "#e1e1e1",
+  },
+  otpCellFilled: {
+    borderColor: "#165d75",
+  },
+  otpDigit: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 44.922,
+    lineHeight: 49.914,
+    letterSpacing: -1.2478,
+    color: "#545454",
+    paddingVertical: 0,
+    textAlign: "center",
+    width: 120,
+  },
+  otpResendRow: {
+    zIndex: 2,
+    position: "absolute",
+    left: 0,
+    top: 1856.6,
+    width: DESIGN_W,
+    alignItems: "center",
+  },
+  otpResendText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 39.931,
+    lineHeight: 49.914,
+    letterSpacing: -1.2478,
+    textAlign: "center",
+  },
+  otpResendTimer: {
+    color: "#989898",
+  },
+  otpResendLink: {
+    color: "#648ddb",
+    textDecorationLine: "underline",
   },
 });

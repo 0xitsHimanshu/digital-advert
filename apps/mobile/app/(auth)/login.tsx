@@ -6,9 +6,11 @@ import { useCallback, useState } from "react";
 import { Image, Pressable, Text, TextInput, View } from "react-native";
 import {
   authAssets,
+  CONTINUE_ARROW_FRAME,
   PhoneAuthArtboard,
   styles,
 } from "@/app/(auth)/phone-auth-artboard";
+import { ArrowWithContinue } from "@/components/arrow-with-continue";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -23,6 +25,7 @@ export default function LoginScreen() {
 
   const onContinue = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/(auth)/verify-otp");
   };
 
   return (
@@ -70,15 +73,10 @@ export default function LoginScreen() {
         />
         <Text style={styles.continueText}>Continue</Text>
         <View style={styles.arrowWrap}>
-          <View style={styles.arrowRotate180Outer}>
-            <View style={styles.arrowNode178Frame}>
-              <Image
-                source={authAssets.continueArrow390178}
-                style={styles.arrowGlyphAbsolute}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
+          <ArrowWithContinue
+            height={CONTINUE_ARROW_FRAME}
+            width={CONTINUE_ARROW_FRAME}
+          />
         </View>
       </Pressable>
 

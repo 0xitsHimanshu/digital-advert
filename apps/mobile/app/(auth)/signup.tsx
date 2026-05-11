@@ -3,12 +3,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { setStatusBarStyle } from "expo-status-bar";
 import { useCallback, useState } from "react";
-import { Image, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import {
-  authAssets,
+  CONTINUE_ARROW_FRAME,
   PhoneAuthArtboard,
   styles,
 } from "@/app/(auth)/phone-auth-artboard";
+import { ArrowWithContinue } from "@/components/arrow-with-continue";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -62,15 +63,10 @@ export default function SignupScreen() {
         />
         <Text style={styles.continueText}>Continue</Text>
         <View style={styles.arrowWrap}>
-          <View style={styles.arrowRotate180Outer}>
-            <View style={styles.arrowNode178Frame}>
-              <Image
-                source={authAssets.continueArrow390178}
-                style={styles.arrowGlyphAbsolute}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
+          <ArrowWithContinue
+            height={CONTINUE_ARROW_FRAME}
+            width={CONTINUE_ARROW_FRAME}
+          />
         </View>
       </Pressable>
 
