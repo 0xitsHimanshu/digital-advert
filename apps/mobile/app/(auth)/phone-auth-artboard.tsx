@@ -611,22 +611,42 @@ export const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  /** Figma 403:519 — masked footer strip (above artboard doodle; use zIndex in screen) */
+  /**
+   * Figma 403:521 — masked footer doodle strip.
+   * Compositing (matches Figma `mask-alpha` group):
+   *   • Rectangle 1052 = 1164.202 × 384 at (-40.43, 2030), fill `rgba(17,17,17,0.08)`
+   *   • Mask = artwork PNG positioned at (29.428, 0), size 1102.475 × 384
+   * Source PNG is 2205 × 768 (aspect 89:31) — exactly the visible aspect, so a
+   * uniform `cover` scale shows every doodle without cropping or vertical stretch.
+   */
   otpFooterMaskOuter: {
     position: "absolute",
     left: -40.43,
     top: 2030,
     width: 1164.202,
     height: 384,
-    overflow: "hidden",
-  },
-  otpFooterMaskFill: {
-    flex: 1,
-    backgroundColor: "rgba(17,17,17,0.08)",
   },
   otpFooterMaskedView: {
     width: 1164.202,
     height: 384,
+  },
+  otpFooterMaskCanvas: {
+    width: 1164.202,
+    height: 384,
+    backgroundColor: "transparent",
+  },
+  /** mask-size 1102.475 × 384 at mask-position (29.428, 0) */
+  otpFooterArtworkImage: {
+    position: "absolute",
+    left: 29.428,
+    top: 0,
+    width: 1102.475,
+    height: 384,
+  },
+  otpFooterMaskFill: {
+    width: 1164.202,
+    height: 384,
+    backgroundColor: "rgba(17,17,17,0.08)",
   },
   otpTitle: {
     position: "absolute",

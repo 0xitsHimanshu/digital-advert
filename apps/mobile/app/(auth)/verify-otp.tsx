@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Image,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -214,7 +213,7 @@ export default function VerifyOtpScreen() {
         </Text>
       </View>
 
-      {/** Figma 403:520 — masked footer doodle strip */}
+      {/** Figma 403:521 — masked footer doodle strip */}
       <View
         style={[
           styles.otpFooterMaskOuter,
@@ -225,11 +224,13 @@ export default function VerifyOtpScreen() {
         <MaskedView
           style={styles.otpFooterMaskedView}
           maskElement={
-            <Image
-              source={authAssets.otpFooterMask}
-              style={StyleSheet.absoluteFillObject}
-              resizeMode="stretch"
-            />
+            <View style={styles.otpFooterMaskCanvas}>
+              <Image
+                source={authAssets.otpFooterMask}
+                style={styles.otpFooterArtworkImage}
+                resizeMode="cover"
+              />
+            </View>
           }
         >
           <View style={styles.otpFooterMaskFill} />
