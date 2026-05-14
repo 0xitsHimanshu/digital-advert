@@ -10,13 +10,30 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 import { BottomNavbar, getBottomNavbarPillMetrics } from "@/src/components/bottom-navbar";
 
 const DESIGN_W = 1080;
 
-const ctaDottedLines = require("@/assets/images/home/cta-dotted-lines.png");
-const swirlArrow = require("@/assets/images/home/swirl-gradient-mask.png");
+/** Figma `CTA_Card_background` (2286:290) — artboard x/y used to place children in card space */
+const CTA_CARD_X = 52;
+const CTA_CARD_Y = 436.66259765625;
+const CTA_CARD_H = 463.33740234375;
+
+/** Caps CTA body copy (~13–14 short words) so long CMS strings cannot push the Get Started CTA. */
+const CTA_DESCRIPTION_MAX_CHARS = 113;
+
+function truncateCtaDescription(text: string, maxChars = CTA_DESCRIPTION_MAX_CHARS): string {
+  const t = text.trim();
+  if (t.length <= maxChars) return t;
+  const slice = t.slice(0, maxChars);
+  const lastSpace = slice.lastIndexOf(" ");
+  const end =
+    lastSpace > maxChars * 0.55 ? slice.slice(0, lastSpace).trimEnd() : slice.trimEnd();
+  return `${end}…`;
+}
+
+const swirlArrow = require("@/assets/images/home/swirl-arrow-colored.png");
 
 const service1 = require("@/assets/images/home/service-1.png");
 const service2 = require("@/assets/images/home/service-2.png");
@@ -27,6 +44,9 @@ const ARROW_GRADIENTS = {
   blue: { from: "#C8DEFF", to: "#064BB3" },
   purple: { from: "#F0C8FF", to: "#F67CFF" },
 } as const;
+
+const CTA_PLACEHOLDER_DESCRIPTION =
+  "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi mollitia commodi neque dolore ea similique, modi odio assumenda enim quas, ab a laboriosam facere? Eum tenetur illo maxime nisi tempore!";
 
 const catThumb1 = require("@/assets/images/home/category-thumb-1.png");
 const catThumb2 = require("@/assets/images/home/category-thumb-2.png");
@@ -104,6 +124,10 @@ function ServiceCard({
   svc: ServiceItem;
   s: (v: number) => number;
 }) {
+  const imageInset = s(19);
+  const imageRadius = s(32);
+  const imageHeight = s(250);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -118,22 +142,33 @@ function ServiceCard({
         borderCurve: "continuous",
       }}
     >
-      <Image
-        source={svc.image}
-        style={{ width: "100%", height: s(250) }}
-        resizeMode="cover"
-      />
+      <View style={{ padding: imageInset }}>
+        <View
+          style={{
+            height: imageHeight,
+            borderRadius: imageRadius,
+            overflow: "hidden",
+            borderCurve: "continuous",
+          }}
+        >
+          <Image
+            source={svc.image}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </View>
+      </View>
       <View
         style={{
-          paddingHorizontal: s(24),
-          paddingTop: s(12),
+          paddingHorizontal: imageInset,
+          paddingTop: s(4),
           paddingBottom: s(18),
         }}
       >
         <Text
           style={{
             fontFamily: "Poppins_500Medium",
-            fontSize: s(32),
+            fontSize: s(38),
             lineHeight: s(55),
             color: "#262626",
             textTransform: "capitalize",
@@ -146,10 +181,10 @@ function ServiceCard({
           numberOfLines={3}
           style={{
             fontFamily: "Poppins_400Regular",
-            fontSize: s(18.5),
+            fontSize: s(24),
             lineHeight: s(23),
             color: "#999",
-            width: s(260),
+            alignSelf: "stretch",
             textTransform: "capitalize",
             letterSpacing: -s(1.5),
           }}
@@ -331,10 +366,12 @@ export default function HomeScreen() {
             marginTop: s(16),
           }}
         >
+
+          {/* Greeting hard coded name, TODO: Add dynamic name from user session*/ }
           <Text
             style={{
               fontFamily: "Poppins_500Medium",
-              fontSize: s(48),
+              fontSize: s(55),
               color: "#1e1e1e",
               letterSpacing: -s(1.3),
               textTransform: "capitalize",
@@ -342,6 +379,9 @@ export default function HomeScreen() {
           >
             hey! rahul
           </Text>
+
+          {/* Notification and Menu buttons */}
+          {/* TODO: Add dynamic notification count from user session */}
           <View
             style={{
               flexDirection: "row",
@@ -351,15 +391,15 @@ export default function HomeScreen() {
           >
             <View
               style={{
-                width: s(80),
-                height: s(80),
-                borderRadius: s(40),
+                width: s(100),
+                height: s(100),
+                borderRadius: s(50),
                 backgroundColor: "#fff8e5",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="notifications" size={s(38)} color="#1e1e1e" />
+              <Ionicons name="notifications" size={s(55)} color="#1e1e1e" />
             </View>
             <Pressable
               accessibilityRole="button"
@@ -407,14 +447,13 @@ export default function HomeScreen() {
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: padH,
-            marginTop: s(40),
+            marginTop: s(10),
           }}
         >
           <Text
             style={{
               fontFamily: "Poppins_600SemiBold",
-              fontSize: s(71),
-              lineHeight: s(76),
+              fontSize: s(100),
               color: "#2f2f2f",
               textTransform: "capitalize",
             }}
@@ -423,8 +462,8 @@ export default function HomeScreen() {
           </Text>
           <Image
             source={swirlArrow}
-            style={{ width: s(120), height: s(100), marginLeft: s(8) }}
-            resizeMode="contain"
+            style={{ width: s(150), height: s(166), transform: [{ rotate: "-46.97deg" }] }}
+            resizeMode="cover"
           />
         </View>
 
@@ -435,77 +474,126 @@ export default function HomeScreen() {
             marginTop: s(40),
             borderRadius: s(46),
             overflow: "hidden",
-            height: s(420),
+            height: s(CTA_CARD_H),
             borderCurve: "continuous",
             backgroundColor: "#165d75",
           }}
         >
-          <Image
-            source={ctaDottedLines}
-            style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              opacity: 0.5,
-              transform: [{ rotate: "-0.56deg" }],
-            }}
-            resizeMode="cover"
-          />
-          {/* Subtle decorative rings inside the CTA card */}
+          {/* Outer Circle of the CTA Card */}
           <View
             pointerEvents="none"
             style={{
               position: "absolute",
-              width: s(500),
-              height: s(500),
-              right: -s(80),
-              bottom: -s(200),
-              borderRadius: s(250),
-              borderWidth: s(60),
-              borderColor: "rgba(255,255,255,0.04)",
+              left: s(139.330078125 - CTA_CARD_X),
+              top: s(401 - CTA_CARD_Y),
+              width: s(941),
+              height: s(1221),
             }}
-          />
+          >
+            <Svg width="100%" height="100%" viewBox="0 0 941 1221" fill="none">
+              <Circle
+                cx={610.5}
+                cy={610.5}
+                r={544.04}
+                stroke="white"
+                strokeOpacity={0.04}
+                strokeWidth={132.92}
+                fill="none"
+              />
+            </Svg>
+          </View>
+          {/* Inner Cirle of the CTA Card */}
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: s(424 + (726 - 656) / 2 - CTA_CARD_X),
+              top: s(641.66259765625 - CTA_CARD_Y),
+              width: s(656),
+              height: s(725),
+            }}
+          >
+            <Svg width="100%" height="100%" viewBox="0 0 656 725" fill="none">
+              <Path
+                d="M363 66.46c163.861 0 296.54 132.628 296.54 296.04S526.861 658.54 363 658.54 66.46 525.912 66.46 362.5 199.139 66.46 363 66.46Z"
+                stroke="#fff"
+                strokeOpacity={0.04}
+                strokeWidth={132.92}
+                fill="none"
+              />
+            </Svg>
+          </View>
+          {/* CTA dotted frame */}
+            <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: s(68.999267578125 - CTA_CARD_X),
+              top: s(457.81982421875 - CTA_CARD_Y),
+              width: s(942),
+              height: s(427),
+              borderWidth: s(5),
+              borderColor: "rgba(255,255,255,0.5)",
+              borderStyle: "dashed",
+              borderRadius: s(42),
+            }}
+            >
+            </View>
+
+            {/* CTA Card content */}
           <View
             style={{
               flex: 1,
-              paddingHorizontal: s(40),
-              paddingVertical: s(36),
-              justifyContent: "flex-end",
+              paddingLeft: s(100),
+              paddingRight: s(40),
+              paddingBottom: s(36),
             }}
           >
-            <Text
-              style={{
-                fontFamily: "Poppins_600SemiBold",
-                fontSize: s(59),
-                lineHeight: s(66),
-                color: "#fff",
-                width: s(370),
-                textTransform: "capitalize",
-              }}
-            >
-              Boost Your Brand 🚀
-            </Text>
-            <Text
-              style={{
-                fontFamily: "Poppins_400Regular",
-                fontSize: s(18.5),
-                lineHeight: s(23),
-                color: "#fff",
-                width: s(265),
-                marginTop: s(10),
-                letterSpacing: -s(1.5),
-                textTransform: "capitalize",
-              }}
-            >
-              popular We sent a verification 5 digit code on your number.
-            </Text>
+            <View>
+              {/* TODO: Add dynamic title from Database about the CTA Card detials */}
+              <Text
+                style={{
+                  fontFamily: "Poppins_600SemiBold",
+                  fontSize: s(59),
+                  lineHeight: s(66),
+                  color: "#fff",
+                  width: s(370),
+                  textTransform: "capitalize",
+                  paddingTop: s(73.34),
+                }}
+              >
+                Boost Your Brand 🚀
+              </Text>
+
+              {/* TODO: Add dynamic description from Database about the CTA Card detials */}
+              <Text
+                numberOfLines={3}
+                ellipsizeMode="tail"
+                accessibilityLabel={CTA_PLACEHOLDER_DESCRIPTION}
+                style={{
+                  fontFamily: "Poppins_400Regular",
+                  fontSize: s(28),
+                  lineHeight: s(40),
+                  color: "#fff",
+                  alignSelf: "stretch",
+                  marginTop: s(10),
+                  marginLeft: s(15),
+                  textTransform: "capitalize",
+                }}
+              >
+                {truncateCtaDescription(CTA_PLACEHOLDER_DESCRIPTION)}
+              </Text>
+            </View>
+
+            {/* Get Started Button */}
+            {/* TODO: Add this button working and redirect it to the details of entered best seller service */}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Get Started"
               style={{
                 marginTop: s(20),
-                width: s(205),
-                height: s(61),
+                width: s(260),
+                height: s(75),
                 borderRadius: s(62),
                 backgroundColor: "#ffcd47",
                 alignItems: "center",
@@ -516,10 +604,11 @@ export default function HomeScreen() {
               <Text
                 style={{
                   fontFamily: "Poppins_500Medium",
-                  fontSize: s(24),
+                  fontSize: s(34),
                   color: "#212121",
                   letterSpacing: -s(1.1),
                   textTransform: "uppercase",
+
                 }}
               >
                 Get Started
@@ -568,6 +657,7 @@ export default function HomeScreen() {
                   ? {
                       backgroundColor: "#ffcd47",
                       boxShadow: "11px 11px 29px rgba(244,214,66,0.21)",
+                      width: s(260),
                     }
                   : {
                       borderWidth: 1,
@@ -578,7 +668,7 @@ export default function HomeScreen() {
               <Text
                 style={{
                   fontFamily: "Poppins_500Medium",
-                  fontSize: s(32),
+                  fontSize: s(35),
                   color: i === 0 ? "#000" : "#404040",
                   letterSpacing: -s(1.5),
                   textTransform: "capitalize",
@@ -603,8 +693,9 @@ export default function HomeScreen() {
           <Text
             style={{
               fontFamily: "Poppins_500Medium",
-              fontSize: s(42),
+              fontSize: s(45),
               lineHeight: s(56),
+              width: s(400),
               color: "#1e1e1e",
               letterSpacing: -s(1.5),
               textTransform: "capitalize",
@@ -616,7 +707,7 @@ export default function HomeScreen() {
             <Text
               style={{
                 fontFamily: "Poppins_400Regular",
-                fontSize: s(23),
+                fontSize: s(35),
                 color: "#363636",
                 letterSpacing: -s(1.5),
               }}
@@ -631,7 +722,7 @@ export default function HomeScreen() {
           contentContainerStyle={{
             paddingHorizontal: padH,
             gap: s(20),
-            paddingTop: s(16),
+            paddingTop: s(30),
           }}
         >
           {SERVICES.map((svc) => (
@@ -652,7 +743,7 @@ export default function HomeScreen() {
           <Text
             style={{
               fontFamily: "Poppins_500Medium",
-              fontSize: s(42),
+              fontSize: s(45),
               lineHeight: s(56),
               color: "#1e1e1e",
               letterSpacing: -s(1.5),
@@ -665,7 +756,7 @@ export default function HomeScreen() {
             <Text
               style={{
                 fontFamily: "Poppins_400Regular",
-                fontSize: s(23),
+                fontSize: s(35),
                 color: "#363636",
                 letterSpacing: -s(1.5),
               }}
