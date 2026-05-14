@@ -91,7 +91,7 @@ function HomeIconOutline({ size, color }: { size: number; color: string }) {
       <Path
         d="M28.648 8.663c3.185-2.536 8.207-2.597 11.543-.208l.318.24 18.855 14.953v.001c1.16.938 2.143 2.385 2.77 4.015.59 1.528.838 3.142.68 4.542l-.037.277-3.625 21.51c-.751 4.29-4.944 7.823-9.325 7.823H19.3c-4.441 0-8.544-3.45-9.296-7.793h-.001L6.374 32.5v-.003l-.042-.279c-.18-1.408.057-3.024.645-4.55.626-1.628 1.618-3.074 2.804-4.012h.002zm5.915 31.025c-1.725 0-3.16 1.41-3.16 3.142v8.565c0 1.731 1.435 3.142 3.16 3.142 1.724 0 3.16-1.41 3.16-3.142V42.83c0-1.731-1.436-3.142-3.16-3.142Z"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={5}
       />
     </Svg>
   );
@@ -103,12 +103,12 @@ function SearchIconOutline({ size, color }: { size: number; color: string }) {
       <Path
         d="M51.625 28.271c0 12.897-10.457 23.354-23.354 23.354S4.917 41.168 4.917 28.271 15.374 4.917 28.271 4.917s23.354 10.457 23.354 23.354Z"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={5}
       />
       <Path
         d="m45.48 45.48 8.603 8.603"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={5}
         strokeLinecap="round"
       />
     </Svg>
@@ -122,12 +122,12 @@ function SearchIconFilled({ size, color }: { size: number; color: string }) {
         d="M51.625 28.271c0 12.897-10.457 23.354-23.354 23.354S4.917 41.168 4.917 28.271 15.374 4.917 28.271 4.917s23.354 10.457 23.354 23.354Z"
         fill={color}
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={5}
       />
       <Path
         d="m45.48 45.48 8.603 8.603"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={5}
         strokeLinecap="round"
       />
     </Svg>
@@ -318,7 +318,7 @@ export function BottomNavbar({
               >
                 <Ionicons
                   name={activeTab === "cart" ? "cart" : "cart-outline"}
-                  size={s(48)}
+                  size={s(64)}
                   color={iconColor}
                 />
               </Pressable>
@@ -332,7 +332,7 @@ export function BottomNavbar({
               >
                 <Ionicons
                   name={activeTab === "profile" ? "person" : "person-outline"}
-                  size={s(48)}
+                  size={s(55)}
                   color={iconColor}
                 />
               </Pressable>
