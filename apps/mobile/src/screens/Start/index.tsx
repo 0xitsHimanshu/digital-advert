@@ -1,72 +1,174 @@
+/**
+ * StartScreen — onboarding / landing screen (app entry via `src/app/index.tsx`)
+ *
+ * Layout strategy
+ * ----------------
+ * All visual elements are positioned in a fixed 1080×2340 Figma artboard (`canvas`),
+ * then uniformly scaled to fill the device viewport. Bottom-anchoring keeps the
+ * footer wave flush with the physical screen edge (including the home-indicator
+ * safe area on iOS / edge-to-edge Android).
+ *
+ * Figma source
+ * ------------
+ * File: Mobile Application for XYZ
+ * Frame: START (1080×2340)
+ *
+ * Layer stack (back → front)
+ * --------------------------
+ * 1. Background concentric rings (Ellipse 23–26)
+ * 2. Headline + subcopy
+ * 3. Hero halo (Ellipse 35–36) + hero photograph
+ * 4. Bottom wave (teal gradient vector)
+ * 5. Floating white cards + mask icons + 3D stickers
+ * 6. Decorative swirl arrow (raster)
+ * 7. “Get Started” pill CTA
+ */
+
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, type Href } from "expo-router";
 import {
-  Dimensions,
   Image,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Circle,
   Defs,
   Ellipse as SvgEllipse,
-  G,
   LinearGradient as SvgLinearGradient,
   Path,
   Stop,
 } from "react-native-svg";
 import { colors } from "@/src/constants/theme";
+import { ArrowWithContinue } from "@/src/screens/Auth/components/arrow-with-continue";
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+// =============================================================================
+// Artboard — master coordinate system (all `top` / `left` values are relative
+// to this 1080×2340 box before viewport scaling is applied).
+// =============================================================================
 
-/** Figma START artboard — matches exported “START” frame */
+/** Figma START frame width (px). */
 const DESIGN_W = 1080;
+
+/** Figma START frame height (px). */
 const DESIGN_H = 2340;
 
-const AUTH_LOGIN = "/(auth)/login" as Href;
+// =============================================================================
+// Bottom wave — teal footer vector (Figma vector + horizontal gradient).
+// Height is intentionally taller than the original 151.5px export so the curve
+// reads more prominently on tall phones after cover-scale.
+// =============================================================================
 
-/** Get Started sketch — Figma Group 2845 (437:811), Ellipse 27 / 28 */
-const GET_STARTED_FRAME_W = 667;
-const GET_STARTED_FRAME_H = 453;
-const CTA_SKETCH_W = 609.252;
-const CTA_SKETCH_H = 319.707;
-const CTA_SKETCH_CX = CTA_SKETCH_W / 2;
-const CTA_SKETCH_CY = CTA_SKETCH_H / 2;
-const CTA_SKETCH_LEFT = (GET_STARTED_FRAME_W - CTA_SKETCH_W) / 2;
-/** Ellipse 27 / 28 — identical bbox */
-const CTA_OVAL_RX = 594.131 / 2;
-const CTA_OVAL_RY = 139.797 / 2;
+/** Wave bounding width (Figma: 1078px, offset 2px from artboard left). */
+const WAVE_W = 1078;
 
-/** Figma 390:489 frame — pre-rendered gradient swirl (no SVG mask) */
-const SWIRL_ARROW_COLORED = require("@/assets/images/start/swirl-arrow-colored.png");
+/** Wave bounding height (boosted from Figma 151.5px). */
+const WAVE_H = 230;
 
-const SWIRL_W = 342.005;
-const SWIRL_H = 244.038;
+/** `top` so the wave’s bottom edge aligns with `DESIGN_H`. */
+const WAVE_TOP = DESIGN_H - WAVE_H;
 
 /**
- * Pixel-perfect layer from your Figma export: fixed 1080×2340 coordinates,
- * scaled uniformly by width so horizontal layout matches any phone width.
- * Bottom clips on short devices (`overflow: 'hidden'`).
- *
- * Background rings Ellipse 23–26: teal `#1D6279` stroke gradient (4% → 0%
- * opacity) per Figma. Hero halo: Ellipse 35 fill `#FFFFE8`; Ellipse 36 dashed
- * border `#BA8900` / 4px. CTA swirl arrow: bundled `swirl-arrow-colored.png` at Figma 390:489 placement.
+ * Cubic-bezier control-point Y values, scaled proportionally from the original
+ * 151.5px-tall path so the curve shape is preserved at the new height.
  */
+const WAVE_CURVE_PEAK_Y = (100.4 * WAVE_H) / 151.5;
+const WAVE_CURVE_MID_Y = (41.8333 * WAVE_H) / 151.5;
+
+// =============================================================================
+// Navigation
+// =============================================================================
+
+/** Expo Router path for the login flow (first auth step). */
+const AUTH_LOGIN = "/(auth)/login" as Href;
+
+// =============================================================================
+// Get Started CTA — Figma node 2202:304 (GetStartedBtn) / 537:300 (background)
+// =============================================================================
+
+/** Pill button width (px). */
+const GET_STARTED_BTN_W = 461;
+
+/** Pill button height (px); border-radius = height / 2 for a capsule shape. */
+const GET_STARTED_BTN_H = 112;
+
+/** Vertical position on the artboard (Figma `top: 546px`). */
+const GET_STARTED_BTN_TOP = 546;
+
+/** `ArrowWithContinue` render size inside the button (Figma ~52px frame). */
+const GET_STARTED_ARROW_SIZE = 52;
+
+/** Arrow wrapper `top` inside the button (vertically centers ~52px in 112px). */
+const GET_STARTED_ARROW_TOP = 30;
+
+// =============================================================================
+// Decorative swirl arrow — Figma 390:489 (pre-rendered asset, not rebuilt in SVG)
+// =============================================================================
+
+const SWIRL_ARROW_COLORED = require("@/assets/images/start/swirl-arrow-colored.png");
+
+/** Raster frame width (Figma). */
+const SWIRL_W = 342.005;
+
+/** Raster frame height (Figma). */
+const SWIRL_H = 244.038;
+
+// =============================================================================
+// Popped 3D sticker assets — overlaid on the floating white squares
+// =============================================================================
+
+const Popped3dHeartIcon = require("@/assets/images/start/popped-3d-heart.png");
+const Popped3dArchIcon = require("@/assets/images/start/popped-3d-arch.png");
+const Popped3dMegaphoneIcon = require("@/assets/images/start/popped-3d-megaphone.png");
+
+// =============================================================================
+// Component
+// =============================================================================
+
 export default function StartScreen() {
   const router = useRouter();
-  const scale = SCREEN_W / DESIGN_W;
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const { bottom: bottomInset } = useSafeAreaInsets();
+
+  // ---------------------------------------------------------------------------
+  // Responsive scale — “cover” fit + bottom anchor
+  // ---------------------------------------------------------------------------
+  // `layoutH` includes the bottom safe inset so art can draw behind the home bar.
+  // `scale` is the larger of width-fit and height-fit so there is no letterboxing.
+  // `translateY` shifts the canvas up when height-fit wins, cropping the top
+  // instead of leaving a gap above the wave.
+  // ---------------------------------------------------------------------------
+
+  const layoutH = screenH + bottomInset;
+  const scaleX = screenW / DESIGN_W;
+  const scaleY = layoutH / DESIGN_H;
+  const scale = Math.max(scaleX, scaleY);
+  const scaledH = DESIGN_H * scale;
+  const translateY = layoutH - scaledH;
 
   return (
-    <View style={styles.viewport}>
+    // Clips overflow from cover-scale; negative margin bleeds into bottom inset.
+    <View style={[styles.viewport, { marginBottom: -bottomInset }]}>
+      {/* Fixed-size artboard; transform applied at runtime per device. */}
       <View
-          style={[
+        style={[
           styles.canvas,
-          { transform: [{ scale }] },
-          { transformOrigin: "top left" },
+          {
+            transform: [{ scale }, { translateY }],
+            transformOrigin: "top left",
+          },
         ]}
       >
-        {/* Ellipse 23–26 — layered teal gradient rings (Figma node 390:468…) */}
+        {/* ================================================================= */}
+        {/* BACKGROUND — concentric teal gradient rings (Figma Ellipse 23–26)  */}
+        {/* Stroke: #1D6279 at 4% → 0% opacity. `pointerEvents="none"`.       */}
+        {/* ================================================================= */}
+
+        {/* Ellipse 23 — outermost ring (1412×1412, partial off-screen). */}
         <View style={styles.ellipse23Wrap} pointerEvents="none">
           <Svg width={1412} height={1412} viewBox="0 0 1412 1412">
             <Defs>
@@ -92,6 +194,8 @@ export default function StartScreen() {
             />
           </Svg>
         </View>
+
+        {/* Ellipse 24 — second ring (1033×1032). */}
         <View style={styles.ellipse24Wrap} pointerEvents="none">
           <Svg width={1033} height={1032} viewBox="0 0 1033 1032">
             <Defs>
@@ -115,6 +219,8 @@ export default function StartScreen() {
             />
           </Svg>
         </View>
+
+        {/* Ellipse 25 — third ring (663×664). */}
         <View style={styles.ellipse25Wrap} pointerEvents="none">
           <Svg width={663} height={664} viewBox="0 0 663 664">
             <Defs>
@@ -138,6 +244,8 @@ export default function StartScreen() {
             />
           </Svg>
         </View>
+
+        {/* Ellipse 26 — innermost ring (240×240). */}
         <View style={styles.ellipse26Wrap} pointerEvents="none">
           <Svg width={240} height={240} viewBox="0 0 240 240">
             <Defs>
@@ -164,24 +272,34 @@ export default function StartScreen() {
           </Svg>
         </View>
 
+        {/* ================================================================= */}
+        {/* TYPOGRAPHY — hero headline + placeholder subcopy                  */}
+        {/* ================================================================= */}
 
+        {/* Primary headline — Lexend Deca Medium, 87px (Figma). */}
         <Text style={[styles.findTheBest, styles.getStartedTypo]}>
           find the best service here
         </Text>
 
+        {/* Secondary line — Poppins Regular, muted gray (placeholder copy). */}
         <Text style={[styles.findTheBest2, styles.textFlexBox]}>
           {
             "find the best servics herefind the best servics here find the best "
           }
         </Text>
 
-        {/* Ellipse 35 — cream fill behind hero (Figma) */}
+        {/* ================================================================= */}
+        {/* HERO — cream halo, gold dashed ring, photograph                     */}
+        {/* ================================================================= */}
+
+        {/* Ellipse 35 — solid cream circle behind the hero (#FFFFE8). */}
         <View style={styles.ellipse35Wrap} pointerEvents="none">
           <Svg width={1013} height={1013} viewBox="0 0 1013 1013">
             <Circle cx={506.5} cy={506.5} r={506.5} fill="#FFFFE8" />
           </Svg>
         </View>
-        {/* Ellipse 36 — dashed gold ring */}
+
+        {/* Ellipse 36 — dashed gold border ring (#BA8900, 4px stroke). */}
         <View style={styles.ellipse36Wrap} pointerEvents="none">
           <Svg width={951} height={952} viewBox="0 0 951 952">
             <SvgEllipse
@@ -197,27 +315,32 @@ export default function StartScreen() {
           </Svg>
         </View>
 
+        {/* Hero photo — large bitmap, intentionally overflows artboard bounds. */}
         <Image
           source={require("@/assets/images/start/hero.png")}
           style={styles.happyTeenagerShowingPositivIcon}
           resizeMode="cover"
         />
 
-        {/* Bottom wave — SVG matches Figma vector + gradient */}
+        {/* ================================================================= */}
+        {/* FOOTER WAVE — teal gradient vector, pinned to artboard bottom       */}
+        {/* Gradient: #165D75 → #177EA1 (matches auth Continue button).       */}
+        {/* ================================================================= */}
+
         <View style={styles.waveWrap}>
           <Svg
-            width={1078}
-            height={151.5}
-            viewBox="0 0 1078 151.5"
+            width={WAVE_W}
+            height={WAVE_H}
+            viewBox={`0 0 ${WAVE_W} ${WAVE_H}`}
             preserveAspectRatio="none"
           >
             <Defs>
               <SvgLinearGradient
                 id="startWaveGrad"
                 x1="0"
-                y1="75.75"
-                x2="1078"
-                y2="75.75"
+                y1={WAVE_H / 2}
+                x2={WAVE_W}
+                y2={WAVE_H / 2}
                 gradientUnits="userSpaceOnUse"
               >
                 <Stop offset="0" stopColor="#165D75" />
@@ -225,41 +348,70 @@ export default function StartScreen() {
               </SvgLinearGradient>
             </Defs>
             <Path
-              d="M1078 0C735.2 100.4 216.5 41.8333 0 0V151.5H1078V0Z"
+              d={`M1078 0C735.2 ${WAVE_CURVE_PEAK_Y} 216.5 ${WAVE_CURVE_MID_Y} 0 0V${WAVE_H}H1078V0Z`}
               fill="url(#startWaveGrad)"
             />
           </Svg>
         </View>
 
-        {/* Floating white squares */}
+        {/* ================================================================= */}
+        {/* FLOATING CARDS — white rounded squares with drop shadow           */}
+        {/* Shared layout: 138×138, 29px radius (`startChildLayout`).         */}
+        {/* ================================================================= */}
+
+        {/* Bottom-left empty card on the hero circle. */}
         <View style={[styles.rectangleView, styles.startChildLayout]} />
-        <View style={[styles.startChild4, styles.startChildLayout]} />
-        <View style={[styles.startChild5, styles.startChildLayout]} />
+
+        {/* Card behind the megaphone 3D sticker. */}
+        <View style={[styles.MegaphoneBgSquare, styles.startChildLayout]} />
+
+        {/* Card behind the heart 3D sticker. */}
+        <View style={[styles.HeartBgSquare, styles.startChildLayout]} />
+
+        {/* Bottom-right empty card on the hero circle. */}
         <View style={[styles.startChild6, styles.startChildLayout]} />
+
+        {/* ================================================================= */}
+        {/* MASK ICONS — tinted accent glyphs (opacity 0.3) on upper area     */}
+        {/* Uses `colors.startAccent` via `ACCENT` constant.                  */}
+        {/* ================================================================= */}
 
         <Image
           source={require("@/assets/images/start/lightbulb-mask.png")}
-          style={[styles.maskGroupIcon2, { tintColor: ACCENT }]}
+          style={[styles.BulbIcon, { tintColor: ACCENT }]}
           resizeMode="contain"
         />
         <Image
           source={require("@/assets/images/start/globe-mask.png")}
-          style={[styles.maskGroupIcon3, { tintColor: ACCENT }]}
+          style={[styles.GlobeIcon, { tintColor: ACCENT }]}
           resizeMode="contain"
         />
 
+        {/* ================================================================= */}
+        {/* 3D STICKERS — PNG overlays aligned to each floating card           */}
+        {/* ================================================================= */}
+
         <Image
-          source={require("@/assets/images/start/card-megaphone.png")}
-          style={styles.chatgptImageMay4202612}
+          source={Popped3dHeartIcon}
+          style={styles.Popped3dHeartIcon}
           resizeMode="contain"
         />
         <Image
-          source={require("@/assets/images/start/card-heart.png")}
-          style={styles.chatgptImageMay4202601}
+          source={Popped3dArchIcon}
+          style={styles.Popped3dArchIcon}
+          resizeMode="contain"
+        />
+        <Image
+          source={Popped3dMegaphoneIcon}
+          style={styles.Popped3dMegaphoneIcon}
           resizeMode="contain"
         />
 
-        {/* Swirl arrow above CTA — Figma 390:489 (same frame as mask build; raster asset) */}
+        {/* ================================================================= */}
+        {/* DECORATIVE SWIRL — points toward the Get Started CTA              */}
+        {/* Non-interactive (`pointerEvents="none"`).                         */}
+        {/* ================================================================= */}
+
         <View style={styles.swirlArrowOuter} pointerEvents="none">
           <Image
             source={SWIRL_ARROW_COLORED}
@@ -268,59 +420,47 @@ export default function StartScreen() {
           />
         </View>
 
+        {/* ================================================================= */}
+        {/* CTA — “Get Started” pill button (Figma 2202:304)                  */}
+        {/* Reuses auth gradient + `ArrowWithContinue` (Figma 390:178).       */}
+        {/* ================================================================= */}
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Get started"
           onPress={() => router.push(AUTH_LOGIN)}
-          style={styles.getStartedParent}
+          style={styles.getStartedBtn}
         >
-          <View pointerEvents="none" style={[styles.groupChild, styles.groupChildLayout]}>
-            <View style={styles.ctaSketchGroup2845}>
-              <Svg
-                width={CTA_SKETCH_W}
-                height={CTA_SKETCH_H}
-                viewBox={`0 0 ${CTA_SKETCH_W} ${CTA_SKETCH_H}`}
-              >
-                <G
-                  transform={`rotate(-4.865 ${CTA_SKETCH_CX} ${CTA_SKETCH_CY})`}
-                >
-                  <SvgEllipse
-                    cx={CTA_SKETCH_CX}
-                    cy={CTA_SKETCH_CY}
-                    rx={CTA_OVAL_RX}
-                    ry={CTA_OVAL_RY}
-                    fill="none"
-                    stroke="#000000"
-                    strokeOpacity={0.47}
-                    strokeWidth={1.75845}
-                  />
-                </G>
-                <G
-                  transform={`rotate(3.689 ${CTA_SKETCH_CX} ${CTA_SKETCH_CY})`}
-                >
-                  <SvgEllipse
-                    cx={CTA_SKETCH_CX}
-                    cy={CTA_SKETCH_CY}
-                    rx={CTA_OVAL_RX}
-                    ry={CTA_OVAL_RY}
-                    fill="none"
-                    stroke="#000000"
-                    strokeOpacity={0.47}
-                    strokeWidth={1.75845}
-                  />
-                </G>
-              </Svg>
-            </View>
+          <LinearGradient
+            colors={["#165d75", "#177ea1"]}
+            end={{ x: 1, y: 0 }}
+            start={{ x: 0, y: 0 }}
+            style={styles.getStartedGradient}
+          />
+          <Text style={styles.getStartedBtnText}>Get Started</Text>
+          <View style={styles.getStartedArrowWrap}>
+            <ArrowWithContinue
+              height={GET_STARTED_ARROW_SIZE}
+              width={GET_STARTED_ARROW_SIZE}
+            />
           </View>
-          <Text style={[styles.getStarted, styles.getStartedTypo]}>Get Started</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
+// =============================================================================
+// Theme tokens & shared style fragments
+// =============================================================================
+
+/** Accent tint for mask icons — from `src/constants/theme.ts`. */
 const ACCENT = colors.startAccent;
 
+/**
+ * Drop shadow applied to all floating white cards (`startChildLayout`).
+ * Matches Figma: offset (7, 7), blur 8.5, 10% black.
+ */
 const CARD_SHADOW = {
   shadowColor: "#000",
   shadowOffset: { width: 7, height: 7 },
@@ -329,13 +469,23 @@ const CARD_SHADOW = {
   elevation: 17,
 } as const;
 
+// =============================================================================
+// Styles — all positions are in design-space pixels (1080×2340 artboard)
+// =============================================================================
+
 const styles = StyleSheet.create({
+  // ---------------------------------------------------------------------------
+  // Viewport & canvas
+  // ---------------------------------------------------------------------------
+
+  /** Full-screen host; cream background matches Figma frame fill (#fffdf8). */
   viewport: {
     flex: 1,
     backgroundColor: "#fffdf8",
     overflow: "hidden",
-    maxHeight: SCREEN_H,
   },
+
+  /** Unscaled artboard; width/height match `DESIGN_W` × `DESIGN_H`. */
   canvas: {
     width: DESIGN_W,
     height: DESIGN_H,
@@ -343,10 +493,20 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
+  // ---------------------------------------------------------------------------
+  // Shared text & card primitives
+  // ---------------------------------------------------------------------------
+
+  /** Base for absolutely positioned body text blocks. */
   textFlexBox: {
     textAlign: "left",
     position: "absolute",
   },
+
+  /**
+   * Shared headline positioning — horizontally centered via `left: "50%"`
+   * plus a negative `marginLeft` on each child style.
+   */
   getStartedTypo: {
     fontWeight: "500",
     textAlign: "left",
@@ -355,6 +515,10 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
 
+  /**
+   * Floating white square — 138×138, 29px corner radius, card shadow.
+   * Composed with per-card `top` / `left` / `transform` overrides.
+   */
   startChildLayout: {
     height: 138,
     width: 138,
@@ -364,21 +528,11 @@ const styles = StyleSheet.create({
     ...CARD_SHADOW,
   },
 
-  groupChildLayout: {
-    height: GET_STARTED_FRAME_H,
-    width: GET_STARTED_FRAME_W,
-    position: "absolute",
-  },
-  /** Group 2845 — 609.252×319.707, rotate 13.482°; ellipses rotate about sketch center */
-  ctaSketchGroup2845: {
-    position: "absolute",
-    top: 0,
-    left: CTA_SKETCH_LEFT,
-    width: CTA_SKETCH_W,
-    height: CTA_SKETCH_H,
-    transform: [{ rotate: "13.482deg" }],
-  },
+  // ---------------------------------------------------------------------------
+  // Background rings (Ellipse 23–26)
+  // ---------------------------------------------------------------------------
 
+  /** Outermost ring — extends beyond artboard top/left. */
   ellipse23Wrap: {
     position: "absolute",
     top: -50,
@@ -386,6 +540,7 @@ const styles = StyleSheet.create({
     width: 1412,
     height: 1412,
   },
+
   ellipse24Wrap: {
     position: "absolute",
     top: 140,
@@ -393,6 +548,7 @@ const styles = StyleSheet.create({
     width: 1033,
     height: 1032,
   },
+
   ellipse25Wrap: {
     position: "absolute",
     top: 324,
@@ -400,6 +556,7 @@ const styles = StyleSheet.create({
     width: 663,
     height: 664,
   },
+
   ellipse26Wrap: {
     position: "absolute",
     top: 536,
@@ -407,6 +564,10 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
   },
+
+  // ---------------------------------------------------------------------------
+  // Legacy / unused — retained from an earlier Figma export (status bar area)
+  // ---------------------------------------------------------------------------
 
   light1: {
     marginLeft: -549,
@@ -443,6 +604,11 @@ const styles = StyleSheet.create({
     textAlign: "left",
   },
 
+  // ---------------------------------------------------------------------------
+  // Typography
+  // ---------------------------------------------------------------------------
+
+  /** Primary headline — Figma top 207, centered with marginLeft -424. */
   findTheBest: {
     marginLeft: -424,
     top: 207,
@@ -452,6 +618,8 @@ const styles = StyleSheet.create({
     width: 593,
     textTransform: "capitalize",
   },
+
+  /** Subcopy — Figma top 397, #a4a4a4, Poppins 30px. */
   findTheBest2: {
     marginLeft: -416,
     top: 397,
@@ -463,6 +631,11 @@ const styles = StyleSheet.create({
     left: "50%",
   },
 
+  // ---------------------------------------------------------------------------
+  // Hero halo (Ellipse 35–36)
+  // ---------------------------------------------------------------------------
+
+  /** Cream fill circle — centered on hero, Figma top 1570. */
   ellipse35Wrap: {
     marginLeft: -501,
     top: 1570,
@@ -471,6 +644,8 @@ const styles = StyleSheet.create({
     left: "50%",
     position: "absolute",
   },
+
+  /** Gold dashed ring — slightly inset, Figma top 1599. */
   ellipse36Wrap: {
     marginLeft: -469,
     top: 1599,
@@ -480,6 +655,7 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
 
+  /** Hero bitmap — oversized to crop naturally at artboard edges. */
   happyTeenagerShowingPositivIcon: {
     top: 1040,
     left: -304,
@@ -488,103 +664,179 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
 
+  // ---------------------------------------------------------------------------
+  // Footer wave
+  // ---------------------------------------------------------------------------
+
+  /** Teal wave container — `WAVE_TOP` pins bottom to artboard edge. */
   waveWrap: {
     position: "absolute",
     left: 2,
-    top: 2190,
-    width: 1078,
-    height: 151.5,
+    top: WAVE_TOP,
+    width: WAVE_W,
+    height: WAVE_H,
   },
 
+  // ---------------------------------------------------------------------------
+  // Floating cards — individual positions & rotations
+  // ---------------------------------------------------------------------------
+
+  /** Empty card, bottom-left on hero circle (rotate -14.1°). */
   rectangleView: {
     top: 1942,
     left: 21,
     transform: [{ rotate: "-14.1deg" }],
   },
-  startChild4: {
-    top: 1449,
-    left: 59,
-    transform: [{ rotate: "-35.4deg" }],
+
+  /** Megaphone card (rotate -35.42°). */
+  MegaphoneBgSquare: {
+    top: 1369.5,
+    left: 58.51,
+    transform: [{ rotate: "-35.42deg" }],
   },
-  startChild5: {
-    top: 1285,
-    left: 799,
-    transform: [{ rotate: "16.8deg" }],
+
+  /** Heart card (rotate 16.82°). */
+  HeartBgSquare: {
+    top: 1284,
+    left: 758.71,
+    transform: [{ rotate: "16.82deg" }],
   },
+
+  /** Empty card, bottom-right on hero circle (rotate 6.5°). */
   startChild6: {
     top: 1699,
     left: 878,
     transform: [{ rotate: "6.5deg" }],
   },
 
-  /** Bulb — Figma mask group: 163×163, rotate −19.306° */
-  maskGroupIcon2: {
+  // ---------------------------------------------------------------------------
+  // Mask icons (tinted, semi-transparent)
+  // ---------------------------------------------------------------------------
+
+  /** Lightbulb mask — upper-left area, rotate -19.31°. */
+  BulbIcon: {
     position: "absolute",
-    top: 861,
-    left: 93,
+    top: 980,
+    left: 147,
     width: 163,
     height: 163,
-    transform: [{ rotate: "-19.306deg" }],
+    opacity: 0.3,
+    transform: [{ rotate: "-19.31deg" }],
   },
-  /** Globe — 118×118 (Figma mask icon frame) */
-  maskGroupIcon3: {
+
+  /** Globe mask — upper-right area, rotate 17.74°. */
+  GlobeIcon: {
     position: "absolute",
-    top: 957,
-    left: 685,
+    top: 964,
+    left: 678,
     width: 118,
     height: 118,
+    opacity: 0.3,
+    transform: [{ rotate: "17.74deg" }],
   },
 
-  chatgptImageMay4202612: {
-    top: 1282,
-    left: 762,
-    width: 166,
-    height: 166,
-    position: "absolute",
-  },
-  chatgptImageMay4202601: {
-    top: 1343,
-    left: -5,
-    width: 302,
-    height: 247,
+  // ---------------------------------------------------------------------------
+  // 3D stickers
+  // ---------------------------------------------------------------------------
+
+  Popped3dHeartIcon: {
+    top: 1281,
+    left: 755,
+    width: 149,
+    height: 149,
+    transform: [{ rotate: "6.81deg" }],
     position: "absolute",
   },
 
-  /** left: calc(50% + 81.91px), size & rotate per Figma swirl arrow layer */
+  Popped3dArchIcon: {
+    top: 1700,
+    left: 850,
+    width: 190,
+    height: 130,
+    position: "absolute",
+  },
+
+  Popped3dMegaphoneIcon: {
+    top: 1360,
+    left: -10,
+    width: 260.82,
+    height: 173.88,
+    transform: [{ rotate: "-18.26deg" }],
+    position: "absolute",
+  },
+
+  // ---------------------------------------------------------------------------
+  // Decorative swirl arrow
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Swirl wrapper — Figma left 587.91, top 361.81, rotate 55.59°.
+   * Sized to `SWIRL_W` × `SWIRL_H`.
+   */
   swirlArrowOuter: {
     position: "absolute",
-    left: "50%",
-    marginLeft: 81.91,
-    top: 253.22,
+    left: 587.91,
+    top: 361.81,
     width: SWIRL_W,
     height: SWIRL_H,
-    transform: [{ rotate: "10.567deg" }],
+    transform: [{ rotate: "55.59deg" }],
   },
+
   swirlArrowImage: {
     width: "100%",
     height: "100%",
   },
 
-  getStartedParent: {
-    marginLeft: -461,
-    top: 407,
-    left: "50%",
-    width: GET_STARTED_FRAME_W,
-    height: GET_STARTED_FRAME_H,
+  // ---------------------------------------------------------------------------
+  // Get Started CTA
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Pill pressable — Figma 2202:304.
+   * `left: 116` centers the 461px button on the 1080px artboard.
+   */
+  getStartedBtn: {
     position: "absolute",
-  },
-  getStarted: {
-    marginLeft: -106,
-    top: 202,
-    fontSize: 39,
-    letterSpacing: -1.22,
-    lineHeight: 49,
-    fontFamily: "Poppins_500Medium",
-  },
-  groupChild: {
-    top: 0,
-    left: 0,
-    alignItems: "center",
+    left: 116,
+    top: GET_STARTED_BTN_TOP,
+    width: GET_STARTED_BTN_W,
+    height: GET_STARTED_BTN_H,
+    borderRadius: GET_STARTED_BTN_H / 2,
+    overflow: "hidden",
     justifyContent: "center",
+  },
+
+  /** Full-bleed gradient fill behind label + arrow. */
+  getStartedGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: GET_STARTED_BTN_H / 2,
+  },
+
+  /**
+   * Button label — Figma 538:302 (Poppins Medium 36.302px, white).
+   * `left: 132` offsets text within the pill.
+   */
+  getStartedBtnText: {
+    position: "absolute",
+    left: 132,
+    top: (GET_STARTED_BTN_H - 45.378) / 2,
+    fontFamily: "Poppins_500Medium",
+    fontSize: 36.302,
+    lineHeight: 45.378,
+    letterSpacing: -1.1344,
+    color: "#fff",
+  },
+
+  /**
+   * Arrow icon container — Figma arrow frame at left 370 inside button.
+   * Uses shared `ArrowWithContinue` from auth screens.
+   */
+  getStartedArrowWrap: {
+    position: "absolute",
+    left: 370,
+    top: GET_STARTED_ARROW_TOP,
+    width: GET_STARTED_ARROW_SIZE,
+    height: GET_STARTED_ARROW_SIZE,
+    zIndex: 1,
   },
 });
