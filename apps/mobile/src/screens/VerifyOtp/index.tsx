@@ -13,6 +13,7 @@ import {
   type NativeSyntheticEvent,
   type TextInputKeyPressEventData,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import {
   authAssets,
   CONTINUE_ARROW_FRAME,
@@ -23,6 +24,7 @@ import {
 } from "@/src/screens/Auth/phone-auth-artboard";
 import { ArrowWithContinue } from "@/src/screens/Auth/components/arrow-with-continue";
 import { OtpPage1Illustration } from "@/src/screens/VerifyOtp/components/otp-page1-illustration";
+import { useOtpKeyboardShift } from "@/src/screens/VerifyOtp/hooks/use-otp-keyboard-shift";
 
 const OTP_LEN = 5;
 const RESEND_SECONDS = 28;
@@ -42,6 +44,7 @@ export default function VerifyOtpScreen() {
 
   const filled = digits.every((d) => d.length === 1);
   const canSubmit = filled || DEV_SKIP_OTP_CHECK;
+  const otpSheetShiftStyle = useOtpKeyboardShift();
 
   useFocusEffect(
     useCallback(() => {
@@ -111,22 +114,26 @@ export default function VerifyOtpScreen() {
 
   return (
     <PhoneAuthArtboard>
-      <View style={styles.otpPanelShadow} pointerEvents="none" />
-      <View style={styles.otpPanel} pointerEvents="none" />
+      <Animated.View
+        pointerEvents="box-none"
+        style={[styles.otpSheetShift, otpSheetShiftStyle]}
+      >
+        <View style={styles.otpPanelShadow} pointerEvents="none" />
+        <View style={styles.otpPanel} pointerEvents="none" />
 
-      {/** Figma 390:223 — Page-1 / OTP hero (percentage bounds = Dev Mode inset) */}
-      <View style={styles.otpPage1Wrap} pointerEvents="none">
-        <OtpPage1Illustration style={styles.otpPage1Svg} />
-      </View>
+        {/** Figma 390:223 — Page-1 / OTP hero (percentage bounds = Dev Mode inset) */}
+        <View style={styles.otpPage1Wrap} pointerEvents="none">
+          <OtpPage1Illustration style={styles.otpPage1Svg} />
+        </View>
 
-      <Text style={styles.otpTitle}>Verify Otp</Text>
+        <Text style={styles.otpTitle}>Verify Otp</Text>
 
-      <Text style={styles.otpInstruction}>
-        We sent a verification 5 digit code on your number that ends with
-        <Text style={styles.otpInstructionStrong}> XXXXX97567</Text>
-      </Text>
+        <Text style={styles.otpInstruction}>
+          We sent a verification 5 digit code on your number that ends with
+          <Text style={styles.otpInstructionStrong}> XXXXX97567</Text>
+        </Text>
 
-      <View style={styles.otpRow}>
+        <View style={styles.otpRow}>
         {digits.map((digit, index) => (
           <View
             key={index}
@@ -206,45 +213,46 @@ export default function VerifyOtpScreen() {
         </View>
       </Pressable>
 
-      <View style={styles.otpResendRow}>
-        <Text style={styles.otpResendText}>
-          <Text style={styles.otpResendTimer}>Resend OTP in {mmss}</Text>
-          <Text> </Text>
-          <Text
-            onPress={onResend}
-            style={[
-              styles.otpResendLink,
-              resendLeft > 0 && { opacity: 0.45 },
-            ]}
-          >
-            Resend OTP
+        <View style={styles.otpResendRow}>
+          <Text style={styles.otpResendText}>
+            <Text style={styles.otpResendTimer}>Resend OTP in {mmss}</Text>
+            <Text> </Text>
+            <Text
+              onPress={onResend}
+              style={[
+                styles.otpResendLink,
+                resendLeft > 0 && { opacity: 0.45 },
+              ]}
+            >
+              Resend OTP
+            </Text>
           </Text>
-        </Text>
-      </View>
+        </View>
 
-      {/** Figma 403:521 — masked footer doodle strip */}
-      <View
-        style={[
-          styles.otpFooterMaskOuter,
-          { zIndex: 24, elevation: 24 },
-        ]}
-        pointerEvents="none"
-      >
-        <MaskedView
-          style={styles.otpFooterMaskedView}
-          maskElement={
-            <View style={styles.otpFooterMaskCanvas}>
-              <Image
-                source={authAssets.otpFooterMask}
-                style={styles.otpFooterArtworkImage}
-                resizeMode="cover"
-              />
-            </View>
-          }
+        {/** Figma 403:521 — masked footer doodle strip */}
+        <View
+          style={[
+            styles.otpFooterMaskOuter,
+            { zIndex: 24, elevation: 24 },
+          ]}
+          pointerEvents="none"
         >
-          <View style={styles.otpFooterMaskFill} />
-        </MaskedView>
-      </View>
+          <MaskedView
+            style={styles.otpFooterMaskedView}
+            maskElement={
+              <View style={styles.otpFooterMaskCanvas}>
+                <Image
+                  source={authAssets.otpFooterMask}
+                  style={styles.otpFooterArtworkImage}
+                  resizeMode="cover"
+                />
+              </View>
+            }
+          >
+            <View style={styles.otpFooterMaskFill} />
+          </MaskedView>
+        </View>
+      </Animated.View>
     </PhoneAuthArtboard>
   );
 }

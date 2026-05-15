@@ -617,6 +617,19 @@ export const styles = StyleSheet.create({
     height: 26,
   },
 
+  /**
+   * Wrapper for OTP sheet layers that shift up with the keyboard (Verify OTP).
+   * Children use absolute positions on the 1080×2340 artboard.
+   */
+  otpSheetShift: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: DESIGN_W,
+    height: DESIGN_H,
+    zIndex: 1,
+  },
+
   /** Figma 390:193 / 390:256 — Verify OTP */
   otpPanelShadow: {
     zIndex: 1,
