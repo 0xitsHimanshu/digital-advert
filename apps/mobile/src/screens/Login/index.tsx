@@ -3,14 +3,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { setStatusBarStyle } from "expo-status-bar";
 import { useCallback, useState } from "react";
-import { Image, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import {
-  authAssets,
   CONTINUE_ARROW_FRAME,
   PhoneAuthArtboard,
   styles,
 } from "@/src/screens/Auth/phone-auth-artboard";
+import { AuthGetStartedSketch } from "@/src/screens/Auth/components/auth-get-started-sketch";
 import { ArrowWithContinue } from "@/src/screens/Auth/components/arrow-with-continue";
+import { PhoneNumberInput } from "@/src/screens/Auth/components/phone-number-input";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,34 +31,18 @@ export default function LoginScreen() {
 
   return (
     <PhoneAuthArtboard>
-      <Text style={styles.heroTitle}>Let’s get started</Text>
+      <Text style={styles.heroTitle}>Welcome back </Text>
       <Text style={styles.heroSubtitle}>
-        Find trusted services tailored just for you.Find trusted services
-        tailored just for you.
+        Login to access expert digital marketing services. Customize for your success
       </Text>
 
-      <View style={styles.getStartedSketchOuter} pointerEvents="none">
-        <View style={styles.getStartedSketchInner}>
-          <Image source={authAssets.group2845} style={styles.group2845Img} />
-        </View>
-      </View>
-      <Text style={styles.getStartedLabel}>Get Started</Text>
+      <AuthGetStartedSketch />
 
       <Text style={styles.fieldLabel}>
         Mobile N<Text style={styles.umber}>UMBER</Text>
       </Text>
 
-      <View style={styles.inputShell}>
-        <TextInput
-          accessibilityLabel="Mobile number"
-          keyboardType="phone-pad"
-          onChangeText={setPhone}
-          placeholder="+91 XXXXXXXX"
-          placeholderTextColor="#989898"
-          style={styles.input}
-          value={phone}
-        />
-      </View>
+      <PhoneNumberInput value={phone} onChangeText={setPhone} />
 
       <Pressable
         accessibilityRole="button"

@@ -1,6 +1,8 @@
 import {
   Dimensions,
   Image,
+  Keyboard,
+  Pressable,
   StyleSheet,
   View,
 } from "react-native";
@@ -41,6 +43,21 @@ const HEADER_TOP = -23;
 /** CSS bottom 68.8% on 2340px → panel height ≈752px */
 const HEADER_PANEL_HEIGHT = 752;
 
+/** Sketch ovals (390:191 / 390:192) — scaled up from Figma for tagline padding */
+const AUTH_SKETCH_ELLIPSE_SCALE = 1.3;
+const AUTH_SKETCH_ELLIPSE_BASE_W = 600;
+const AUTH_SKETCH_ELLIPSE_BASE_H = 176.88;
+const AUTH_TAGLINE_LEFT = 361;
+const AUTH_TAGLINE_TOP = 545;
+const AUTH_TAGLINE_W = 361;
+const AUTH_TAGLINE_LINE_H = 35.21;
+const AUTH_SKETCH_ELLIPSE_W = AUTH_SKETCH_ELLIPSE_BASE_W * AUTH_SKETCH_ELLIPSE_SCALE;
+const AUTH_SKETCH_ELLIPSE_H = AUTH_SKETCH_ELLIPSE_BASE_H * AUTH_SKETCH_ELLIPSE_SCALE;
+const AUTH_SKETCH_ELLIPSE_CX = AUTH_TAGLINE_LEFT + AUTH_TAGLINE_W / 2;
+const AUTH_SKETCH_ELLIPSE_CY = AUTH_TAGLINE_TOP + AUTH_TAGLINE_LINE_H / 2;
+const AUTH_SKETCH_ELLIPSE_LEFT = AUTH_SKETCH_ELLIPSE_CX - AUTH_SKETCH_ELLIPSE_W / 2;
+const AUTH_SKETCH_ELLIPSE_TOP = AUTH_SKETCH_ELLIPSE_CY - AUTH_SKETCH_ELLIPSE_H / 2;
+
 export const authAssets = {
   ellipse38: require("@/assets/images/login/ellipse38.png"),
   ellipse37: require("@/assets/images/login/ellipse37.png"),
@@ -48,7 +65,6 @@ export const authAssets = {
   wifi: require("@/assets/images/login/wifi.png"),
   cellular: require("@/assets/images/login/cellular.png"),
   group2848: require("@/assets/images/login/group2848.png"),
-  group2845: require("@/assets/images/login/group2845.png"),
   /** Figma 403:519 — alpha mask for footer doodle strip */
   otpFooterMask: require("@/assets/images/login/otp-footer-mask.png"),
 } as const;
@@ -221,15 +237,20 @@ export function PhoneAuthArtboard({ children }: PhoneAuthArtboardProps) {
   const scale = SCREEN_W / DESIGN_W;
 
   return (
-    <View style={styles.viewport}>
+    <Pressable
+      style={styles.viewport}
+      onPress={Keyboard.dismiss}
+      accessible={false}
+    >
       <View
         style={[
           styles.canvas,
           { transform: [{ scale }] },
           { transformOrigin: "top left" },
         ]}
+        pointerEvents="box-none"
       >
-        <View style={styles.creamFill} />
+        <View style={styles.creamFill} pointerEvents="none" />
 
         <View style={styles.ellipse38Wrap} pointerEvents="none">
           <Image source={authAssets.ellipse38} style={styles.el435} />
@@ -238,7 +259,7 @@ export function PhoneAuthArtboard({ children }: PhoneAuthArtboardProps) {
           <Image source={authAssets.ellipse37} style={styles.el384} />
         </View>
 
-        <View style={styles.tealHeader} />
+        <View style={styles.tealHeader} pointerEvents="none" />
 
         <View style={styles.ellipse24Wrap} pointerEvents="none">
           <LoginHeaderRing24 />
@@ -272,7 +293,7 @@ export function PhoneAuthArtboard({ children }: PhoneAuthArtboardProps) {
           <Ellipse41Decoration />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -375,52 +396,58 @@ export const styles = StyleSheet.create({
     position: "absolute",
     left: 198,
     top: 229,
-    width: 683,
+    width: 734,
     fontFamily: "Poppins_600SemiBold",
-    fontSize: 80.217,
-    lineHeight: 76.483,
+    fontSize: 80.22,
     color: "#fff",
+    textAlign: "center",
     textTransform: "capitalize",
   },
   heroSubtitle: {
     position: "absolute",
     left: "50%",
     marginLeft: -367,
+    marginTop: 24,
     top: 327,
-    width: 734,
+    width: 774,
     fontFamily: "Poppins_400Regular",
     fontSize: 30,
+    fontWeight: "400",
     color: "#fff",
     textAlign: "center",
     textTransform: "capitalize",
   },
 
-  getStartedSketchOuter: {
+  /** Figma 390:192 — decorative sketch oval (upper), scaled about tagline center. */
+  authEllipse28Wrap: {
     position: "absolute",
-    left: 229,
-    top: 330,
-    width: 622,
-    height: 422.382,
-    alignItems: "center",
-    justifyContent: "center",
+    left: AUTH_SKETCH_ELLIPSE_LEFT,
+    top: AUTH_SKETCH_ELLIPSE_TOP,
+    width: AUTH_SKETCH_ELLIPSE_W,
+    height: AUTH_SKETCH_ELLIPSE_H,
+    transform: [{ rotate: "8deg" }],
   },
-  getStartedSketchInner: {
-    transform: [{ rotate: "13.48deg" }],
-  },
-  group2845Img: {
-    width: 568.148,
-    height: 298.138,
-    resizeMode: "contain",
-  },
-  getStartedLabel: {
+  /** Figma 390:191 — decorative sketch oval (lower), scaled about tagline center. */
+  authEllipse27Wrap: {
     position: "absolute",
-    left: 441.48,
-    top: 517.92,
+    left: AUTH_SKETCH_ELLIPSE_LEFT,
+    top: AUTH_SKETCH_ELLIPSE_TOP,
+    width: AUTH_SKETCH_ELLIPSE_W,
+    height: AUTH_SKETCH_ELLIPSE_H,
+    transform: [{ rotate: "4.86deg" }],
+  },
+  /** Figma 390:189 — tagline inside sketch ovals. */
+  authTagline: {
+    position: "absolute",
+    left: AUTH_TAGLINE_LEFT,
+    top: AUTH_TAGLINE_TOP,
+    width: AUTH_TAGLINE_W,
     fontFamily: "Poppins_500Medium",
-    fontSize: 36.302,
-    lineHeight: 45.378,
-    letterSpacing: -1.1344,
+    fontSize: 28.168,
+    lineHeight: 35.21,
+    letterSpacing: -0.8802,
     color: "#fff",
+    textAlign: "center",
   },
 
   fieldLabel: {
@@ -449,6 +476,27 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 36,
   },
   input: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 40.374,
+    letterSpacing: -1.2617,
+    color: "#1e1e1e",
+    paddingVertical: 0,
+  },
+
+  phoneInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  phonePrefix: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 40.374,
+    letterSpacing: -1.2617,
+    color: "#1e1e1e",
+    marginRight: 12,
+  },
+  phoneInputField: {
+    flex: 1,
     fontFamily: "Poppins_500Medium",
     fontSize: 40.374,
     letterSpacing: -1.2617,
@@ -502,7 +550,7 @@ export const styles = StyleSheet.create({
     left: "50%",
     marginLeft: -288,
     top: 1369,
-    maxWidth: 620,
+    maxWidth: 720
   },
   footerGrey: {
     fontFamily: "Poppins_600SemiBold",

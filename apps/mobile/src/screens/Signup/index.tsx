@@ -3,13 +3,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { setStatusBarStyle } from "expo-status-bar";
 import { useCallback, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import {
   CONTINUE_ARROW_FRAME,
   PhoneAuthArtboard,
   styles,
 } from "@/src/screens/Auth/phone-auth-artboard";
+import { AuthGetStartedSketch } from "@/src/screens/Auth/components/auth-get-started-sketch";
 import { ArrowWithContinue } from "@/src/screens/Auth/components/arrow-with-continue";
+import { PhoneNumberInput } from "@/src/screens/Auth/components/phone-number-input";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -28,26 +30,18 @@ export default function SignupScreen() {
 
   return (
     <PhoneAuthArtboard>
-      <Text style={styles.heroTitle}>Sign up</Text>
+      <Text style={styles.heroTitle}>Get started</Text>
       <Text style={styles.heroSubtitle}>
-        Enter your mobile number to continue.
+        Create an account to access expert digital marketing services. Customize for your success
       </Text>
+
+      <AuthGetStartedSketch />
 
       <Text style={styles.fieldLabel}>
         Mobile N<Text style={styles.umber}>UMBER</Text>
       </Text>
 
-      <View style={styles.inputShell}>
-        <TextInput
-          accessibilityLabel="Mobile number"
-          keyboardType="phone-pad"
-          onChangeText={setPhone}
-          placeholder="+91 XXXXXXXX"
-          placeholderTextColor="#989898"
-          style={styles.input}
-          value={phone}
-        />
-      </View>
+      <PhoneNumberInput value={phone} onChangeText={setPhone} />
 
       <Pressable
         accessibilityRole="button"
