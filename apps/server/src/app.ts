@@ -4,6 +4,7 @@ import morgan from "morgan";
 import { healthRouter } from "./routes/health.js";
 import { adsRouter } from "./routes/ads.js";
 import { echoRouter } from "./routes/echo.js";
+import { authRouter } from "./routes/auth.js";
 
 export function createApp(): Application {
   const app = express();
@@ -27,13 +28,20 @@ export function createApp(): Application {
     res.json({
       name: "digital-advert-server",
       status: "ok",
-      docs: ["/api/health", "/api/ads", "/api/ads/:id", "/api/echo"],
+      docs: [
+        "/api/health",
+        "/api/ads",
+        "/api/ads/:id",
+        "/api/echo",
+        "/api/auth/firebase-exchange",
+      ],
     });
   });
 
   app.use("/api/health", healthRouter);
   app.use("/api/ads", adsRouter);
   app.use("/api/echo", echoRouter);
+  app.use("/api/auth", authRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: "Not Found", path: req.originalUrl });

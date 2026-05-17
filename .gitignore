@@ -36,3 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Firebase native config files (Firebase console → Project settings → Your apps)
+apps/mobile/google-services.json
+apps/mobile/GoogleService-Info.plist

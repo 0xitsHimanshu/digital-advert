@@ -1,9 +1,14 @@
-import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { setStatusBarStyle } from "expo-status-bar";
 import { useCallback, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import { useStartPhoneVerification } from "@/src/hooks/use-start-phone-verification";
 import {
   CONTINUE_ARROW_FRAME,
   PhoneAuthArtboard,
@@ -16,6 +21,7 @@ import { PhoneNumberInput } from "@/src/screens/Auth/components/phone-number-inp
 export default function LoginScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
+  const { start, busy } = useStartPhoneVerification();
 
   useFocusEffect(
     useCallback(() => {
@@ -25,9 +31,10 @@ export default function LoginScreen() {
   );
 
   const onContinue = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push("/(auth)/verify-otp");
+    void start(phone);
   };
+
+  const canSend = phone.length === 10 && !busy;
 
   return (
     <PhoneAuthArtboard>
@@ -47,22 +54,39 @@ export default function LoginScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Continue"
+        accessibilityState={{ disabled: !canSend }}
+        disabled={!canSend}
         onPress={onContinue}
         style={styles.continueBtn}
       >
         <LinearGradient
-          colors={["#165d75", "#177ea1"]}
+          colors={canSend ? ["#165d75", "#177ea1"] : ["#a8bdc4", "#8faab4"]}
           end={{ x: 1, y: 0 }}
+          pointerEvents="none"
           start={{ x: 0, y: 0 }}
           style={styles.continueGradient}
         />
-        <Text style={styles.continueText}>Continue</Text>
-        <View style={styles.arrowWrap}>
+        <Text style={styles.continueText}>{busy ? "Sending..." : "Continue"}</Text>
+        <View style={[styles.arrowWrap, busy && { opacity: 0 }]}>
           <ArrowWithContinue
             height={CONTINUE_ARROW_FRAME}
             width={CONTINUE_ARROW_FRAME}
           />
         </View>
+        {busy ? (
+          <View
+            accessibilityElementsHidden
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              inset: 0,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ActivityIndicator color="#ffffff" />
+          </View>
+        ) : null}
       </Pressable>
 
       <Pressable

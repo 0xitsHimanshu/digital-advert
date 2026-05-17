@@ -83,7 +83,7 @@ Digital Advert is a mobile-first service marketplace application built with Expo
 | Language | TypeScript | 5.x |
 | ORM | Prisma | 6.x |
 | Database | PostgreSQL | 16.x |
-| Auth | Passport.js + JWT | Passport 0.7.x |
+| Auth | Firebase Auth + Passport.js + JWT | Passport 0.7.x |
 | Validation | class-validator + class-transformer | Latest stable |
 | API Documentation | Swagger (OpenAPI 3.0) | Latest stable |
 
@@ -105,7 +105,7 @@ Digital Advert is a mobile-first service marketplace application built with Expo
 | Containerization | Docker + Docker Compose (local dev) |
 | Environment Config | dotenv / Express.js configuration |
 | Push Notifications | Firebase Cloud Messaging (FCM) |
-| OTP | MSG91 (primary) / Twilio (fallback) |
+| OTP | For Auth OTP we are using Firebase Auth and for other OTPs we are using MSG91 (primary) / Twilio (fallback) |
 | Payment | Razorpay |
 | File Storage | AWS S3 or Cloudinary (for service images) |
 

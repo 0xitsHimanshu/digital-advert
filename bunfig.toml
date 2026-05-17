@@ -1,0 +1,7 @@
+[install]
+# Use hoisted linker on Windows so package paths don't include
+# `.bun/<pkg>@<ver>+<hash>/node_modules/<pkg>/...`. The deep nesting from the
+# default isolated linker pushes Android NDK CMake object paths past the 250
+# character limit, which causes `ninja: manifest 'build.ninja' still dirty
+# after 100 tries` failures when building the Expo app on Windows.
+linker = "hoisted"

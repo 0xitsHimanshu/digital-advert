@@ -736,7 +736,7 @@ export const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     color: "#545454",
   },
-  /** Figma 390:256 — 5× cells, row top 1462 */
+  /** Figma 390:256 — OTP cells row top 1462 */
   otpRow: {
     position: "absolute",
     zIndex: 2,

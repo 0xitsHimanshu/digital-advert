@@ -1,10 +1,14 @@
 import MaskedView from "@react-native-masked-view/masked-view";
+import auth from "@react-native-firebase/auth";
+import axios from "axios";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { setStatusBarStyle } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   Text,
@@ -25,26 +29,47 @@ import {
 import { ArrowWithContinue } from "@/src/screens/Auth/components/arrow-with-continue";
 import { OtpPage1Illustration } from "@/src/screens/VerifyOtp/components/otp-page1-illustration";
 import { useOtpKeyboardShift } from "@/src/screens/VerifyOtp/hooks/use-otp-keyboard-shift";
+import {
+  exchangeFirebaseIdTokenForJwt,
+  formatAuthApiError,
+} from "@/src/services/auth-api";
+import { mapPhoneAuthError, sendSmsPhoneOtp } from "@/src/services/phone-auth";
+import { saveCustomerSessionTokens } from "@/src/services/session-tokens";
+import { usePhoneAuthFlow } from "@/src/stores/phone-auth-flow";
 
-const OTP_LEN = 5;
+const OTP_LEN = 6;
 const RESEND_SECONDS = 28;
-
-/** Dev-only: skip OTP entry and hit Continue to preview `/home` (no API yet). */
-const DEV_SKIP_OTP_CHECK = __DEV__;
 
 const HOME = "/(tabs)/home-tab" as Href;
 
+function otpMaskTail(e164: string | null): string {
+  const national = e164?.replace(/^\+91/, "").replace(/\D/g, "") ?? "";
+  const tail = national.slice(-10);
+  if (tail.length < 5) return "—";
+  return tail.slice(-5);
+}
+
+function describeVerifyError(error: unknown): string {
+  if (axios.isAxiosError(error)) return formatAuthApiError(error);
+  return mapPhoneAuthError(error);
+}
+
 export default function VerifyOtpScreen() {
   const router = useRouter();
+  const e164Phone = usePhoneAuthFlow((s) => s.e164Phone);
+  const setPhoneSession = usePhoneAuthFlow((s) => s.setSession);
+  const clearFlow = usePhoneAuthFlow((s) => s.clear);
+
   const [digits, setDigits] = useState<string[]>(() =>
     Array(OTP_LEN).fill("")
   );
   const [resendLeft, setResendLeft] = useState(RESEND_SECONDS);
+  const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
   const inputsRef = useRef<(TextInput | null)[]>([]);
 
   const filled = digits.every((d) => d.length === 1);
-  const canSubmit = filled || DEV_SKIP_OTP_CHECK;
-  const otpSheetShiftStyle = useOtpKeyboardShift();
+  const otpHintDigits = otpMaskTail(e164Phone);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,12 +78,24 @@ export default function VerifyOtpScreen() {
     }, [])
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      const { confirmation, e164Phone: pending } =
+        usePhoneAuthFlow.getState();
+      if (!confirmation || !pending) {
+        router.replace("/(auth)/login");
+      }
+    }, [router])
+  );
+
   useEffect(() => {
     const t = setInterval(() => {
       setResendLeft((s) => (s <= 0 ? 0 : s - 1));
     }, 1000);
     return () => clearInterval(t);
   }, []);
+
+  const otpSheetShiftStyle = useOtpKeyboardShift();
 
   const applyPastedOtp = (text: string) => {
     const chars = text.replace(/\D/g, "").slice(0, OTP_LEN).split("");
@@ -95,22 +132,62 @@ export default function VerifyOtpScreen() {
   };
 
   const onContinue = () => {
-    if (!canSubmit) return;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // TODO: replace with real OTP verification API; then navigate on success.
-    router.replace(HOME);
+    if (!filled || busy) return;
+    void (async () => {
+      const live = usePhoneAuthFlow.getState().confirmation;
+      if (!live) {
+        Alert.alert(
+          "Verification",
+          "Your session expired. Enter your mobile number again."
+        );
+        router.replace("/(auth)/login");
+        return;
+      }
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setBusy(true);
+      try {
+        await live.confirm(digits.join(""));
+        const token = await auth().currentUser?.getIdToken(true);
+        if (!token) throw new Error("Missing Firebase credentials after verification.");
+        const session = await exchangeFirebaseIdTokenForJwt(token);
+        await saveCustomerSessionTokens(session.accessToken, session.refreshToken);
+        clearFlow();
+        router.replace(HOME);
+      } catch (e) {
+        Alert.alert("Sign-in incomplete", describeVerifyError(e));
+      } finally {
+        setBusy(false);
+      }
+    })();
   };
 
   const onResend = () => {
-    if (resendLeft > 0) return;
+    if (resendLeft > 0 || resending) return;
+    const pending = usePhoneAuthFlow.getState().e164Phone;
+    if (!pending) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setResendLeft(RESEND_SECONDS);
+    void (async () => {
+      setResending(true);
+      try {
+        const nextConfirmation = await sendSmsPhoneOtp(pending);
+        setPhoneSession(pending, nextConfirmation);
+        setResendLeft(RESEND_SECONDS);
+        setDigits(Array(OTP_LEN).fill(""));
+        inputsRef.current[0]?.focus();
+      } catch (e) {
+        Alert.alert("Resend failed", mapPhoneAuthError(e));
+      } finally {
+        setResending(false);
+      }
+    })();
   };
 
   const mmss =
     resendLeft > 0
       ? `0:${String(resendLeft).padStart(2, "0")}`
       : "0:00";
+
+  const canContinue = filled && !busy;
 
   return (
     <PhoneAuthArtboard>
@@ -129,102 +206,117 @@ export default function VerifyOtpScreen() {
         <Text style={styles.otpTitle}>Verify Otp</Text>
 
         <Text style={styles.otpInstruction}>
-          We sent a verification 5 digit code on your number that ends with
-          <Text style={styles.otpInstructionStrong}> XXXXX97567</Text>
+          We sent a 6-digit verification code to the number ending with{" "}
+          <Text style={styles.otpInstructionStrong}>XXXXX{otpHintDigits}</Text>
         </Text>
 
         <View style={styles.otpRow}>
-        {digits.map((digit, index) => (
-          <View
-            key={index}
-            style={[
-              styles.otpCell,
-              digit ? styles.otpCellFilled : styles.otpCellEmpty,
-            ]}
-          >
-            <TextInput
-              ref={(r) => {
-                inputsRef.current[index] = r;
-              }}
-              accessibilityLabel={`Digit ${index + 1} of ${OTP_LEN}`}
-              keyboardType="number-pad"
-              onChangeText={(t) => {
-                const cleaned = t.replace(/\D/g, "");
-                if (cleaned.length > 1) {
-                  applyPastedOtp(cleaned);
-                  return;
-                }
-                setDigitAt(index, cleaned);
-              }}
-              onKeyPress={(e) => onKeyPress(index, e)}
-              selectTextOnFocus
-              style={styles.otpDigit}
-              textAlign="center"
-              value={digit}
-            />
-          </View>
-        ))}
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canSubmit }}
-        accessibilityLabel="Continue"
-        disabled={!canSubmit}
-        onPress={onContinue}
-        style={[styles.continueBtn, { top: OTP_CONTINUE_BTN_TOP }]}
-      >
-        {canSubmit ? (
-          <LinearGradient
-            colors={["#165d75", "#177ea1"]}
-            end={{ x: 1, y: 0 }}
-            pointerEvents="none"
-            start={{ x: 0, y: 0 }}
-            style={styles.continueGradient}
-          />
-        ) : (
-          <LinearGradient
-            colors={["#a8bdc4", "#8faab4"]}
-            end={{ x: 1, y: 0 }}
-            pointerEvents="none"
-            start={{ x: 0, y: 0 }}
-            style={styles.continueGradient}
-          />
-        )}
-        <View
-          pointerEvents="box-none"
-          style={styles.continueBtnForeground}
-        >
-          <Text style={styles.continueText}>Continue</Text>
-          <View
-            collapsable={false}
-            style={[
-              styles.arrowWrap,
-              {
-                top: OTP_CONTINUE_ARROW_TOP,
-              },
-            ]}
-          >
-            <ArrowWithContinue
-              height={CONTINUE_ARROW_FRAME}
-              width={CONTINUE_ARROW_FRAME}
-            />
-          </View>
+          {digits.map((digit, index) => (
+            <View
+              key={index}
+              style={[
+                styles.otpCell,
+                digit ? styles.otpCellFilled : styles.otpCellEmpty,
+              ]}
+            >
+              <TextInput
+                ref={(r) => {
+                  inputsRef.current[index] = r;
+                }}
+                accessibilityLabel={`Digit ${index + 1} of ${OTP_LEN}`}
+                keyboardType="number-pad"
+                onChangeText={(t) => {
+                  const cleaned = t.replace(/\D/g, "");
+                  if (cleaned.length > 1) {
+                    applyPastedOtp(cleaned);
+                    return;
+                  }
+                  setDigitAt(index, cleaned);
+                }}
+                onKeyPress={(e) => onKeyPress(index, e)}
+                selectTextOnFocus
+                style={styles.otpDigit}
+                textAlign="center"
+                value={digit}
+              />
+            </View>
+          ))}
         </View>
-      </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canContinue }}
+          accessibilityLabel="Continue"
+          disabled={!canContinue}
+          onPress={onContinue}
+          style={[styles.continueBtn, { top: OTP_CONTINUE_BTN_TOP }]}
+        >
+          {canContinue ? (
+            <LinearGradient
+              colors={["#165d75", "#177ea1"]}
+              end={{ x: 1, y: 0 }}
+              pointerEvents="none"
+              start={{ x: 0, y: 0 }}
+              style={styles.continueGradient}
+            />
+          ) : (
+            <LinearGradient
+              colors={["#a8bdc4", "#8faab4"]}
+              end={{ x: 1, y: 0 }}
+              pointerEvents="none"
+              start={{ x: 0, y: 0 }}
+              style={styles.continueGradient}
+            />
+          )}
+          <View
+            pointerEvents="box-none"
+            style={styles.continueBtnForeground}
+          >
+            <Text style={styles.continueText}>
+              {busy ? "Verifying..." : "Continue"}
+            </Text>
+            <View
+              collapsable={false}
+              style={[
+                styles.arrowWrap,
+                {
+                  top: OTP_CONTINUE_ARROW_TOP,
+                  opacity: busy ? 0 : 1,
+                },
+              ]}
+            >
+              <ArrowWithContinue
+                height={CONTINUE_ARROW_FRAME}
+                width={CONTINUE_ARROW_FRAME}
+              />
+            </View>
+          </View>
+          {busy ? (
+            <View
+              accessibilityElementsHidden
+              pointerEvents="none"
+              style={{
+                ...styles.continueBtnForeground,
+                alignItems: "center",
+              }}
+            >
+              <ActivityIndicator color="#ffffff" />
+            </View>
+          ) : null}
+        </Pressable>
 
         <View style={styles.otpResendRow}>
           <Text style={styles.otpResendText}>
             <Text style={styles.otpResendTimer}>Resend OTP in {mmss}</Text>
             <Text> </Text>
             <Text
-              onPress={onResend}
+              onPress={() => void onResend()}
               style={[
                 styles.otpResendLink,
-                resendLeft > 0 && { opacity: 0.45 },
+                (resendLeft > 0 || resending) && { opacity: 0.45 },
               ]}
             >
-              Resend OTP
+              {resending ? "Sending…" : "Resend OTP"}
             </Text>
           </Text>
         </View>
@@ -242,9 +334,9 @@ export default function VerifyOtpScreen() {
             maskElement={
               <View style={styles.otpFooterMaskCanvas}>
                 <Image
+                  resizeMode="cover"
                   source={authAssets.otpFooterMask}
                   style={styles.otpFooterArtworkImage}
-                  resizeMode="cover"
                 />
               </View>
             }
