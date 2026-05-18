@@ -14,7 +14,10 @@ import {
   View,
 } from "react-native";
 
-import { buildDiceBearAvatarUrl } from "@/src/lib/dicebear-avatar";
+import {
+  buildDiceBearAvatarUrl,
+  pickRandomAvatarSeed,
+} from "@/src/lib/dicebear-avatar";
 import { ArrowWithContinue } from "@/src/screens/Auth/components/arrow-with-continue";
 import {
   SaveDetailsArtboard,
@@ -66,6 +69,8 @@ export default function SaveDetailsScreen() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
+  /** One Lorelei seed per signup — stable until profile is saved. */
+  const [avatarSeed, setAvatarSeed] = useState<string | null>(null);
 
   const keyboardShiftStyle = useSaveDetailsKeyboardShift();
 
@@ -90,14 +95,15 @@ export default function SaveDetailsScreen() {
           return;
         }
         setSession(pending);
+        setAvatarSeed((current) => current ?? pickRandomAvatarSeed());
       })();
     }, [router])
   );
 
-  const avatarUrl = useMemo(() => {
-    if (!session) return null;
-    return buildDiceBearAvatarUrl(session.uid || session.phoneNumber);
-  }, [session]);
+  const avatarUrl = useMemo(
+    () => (avatarSeed ? buildDiceBearAvatarUrl(avatarSeed) : null),
+    [avatarSeed]
+  );
 
   const phoneDisplay = session
     ? nationalDigitsFromE164(session.phoneNumber)
