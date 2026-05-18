@@ -5,6 +5,7 @@ import { healthRouter } from "./routes/health.js";
 import { adsRouter } from "./routes/ads.js";
 import { echoRouter } from "./routes/echo.js";
 import { authRouter } from "./routes/auth.js";
+import { profileRouter } from "./routes/profile.js";
 
 export function createApp(): Application {
   const app = express();
@@ -34,6 +35,7 @@ export function createApp(): Application {
         "/api/ads/:id",
         "/api/echo",
         "/api/auth/firebase-exchange",
+        "/api/profile/me",
       ],
     });
   });
@@ -42,6 +44,7 @@ export function createApp(): Application {
   app.use("/api/ads", adsRouter);
   app.use("/api/echo", echoRouter);
   app.use("/api/auth", authRouter);
+  app.use("/api/profile", profileRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: "Not Found", path: req.originalUrl });

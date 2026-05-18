@@ -8,6 +8,7 @@ export type FirebaseExchangeResponse = {
   expiresIn: number;
   uid: string;
   phoneNumber: string;
+  profileComplete: boolean;
 };
 
 export function formatAuthApiError(e: unknown): string {

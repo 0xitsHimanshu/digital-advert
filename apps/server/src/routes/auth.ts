@@ -1,5 +1,9 @@
 import { Router, type IRouter } from "express";
 import jwt from "jsonwebtoken";
+import {
+  getCustomerProfile,
+  isProfileComplete,
+} from "../lib/customer-profiles.js";
 import { ensureFirebaseAdmin, verifyFirebaseCustomerIdToken } from "../lib/firebase-admin.js";
 
 export const authRouter: IRouter = Router();
@@ -78,12 +82,15 @@ authRouter.post("/firebase-exchange", async (req, res, next) => {
       },
     );
 
+    const existingProfile = await getCustomerProfile(sub);
+
     res.json({
       accessToken,
       refreshToken,
       expiresIn: 900,
       uid: sub,
       phoneNumber: phone,
+      profileComplete: isProfileComplete(existingProfile),
     });
   } catch (e) {
     next(e);

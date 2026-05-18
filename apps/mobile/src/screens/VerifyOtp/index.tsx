@@ -34,6 +34,7 @@ import {
   formatAuthApiError,
 } from "@/src/services/auth-api";
 import { mapPhoneAuthError, sendSmsPhoneOtp } from "@/src/services/phone-auth";
+import { saveOnboardingSession } from "@/src/services/onboarding-session";
 import { saveCustomerSessionTokens } from "@/src/services/session-tokens";
 import { usePhoneAuthFlow } from "@/src/stores/phone-auth-flow";
 
@@ -41,6 +42,7 @@ const OTP_LEN = 6;
 const RESEND_SECONDS = 28;
 
 const HOME = "/(tabs)/home-tab" as Href;
+const SAVE_DETAILS = "/(auth)/save-details" as Href;
 
 function otpMaskTail(e164: string | null): string {
   const national = e164?.replace(/^\+91/, "").replace(/\D/g, "") ?? "";
@@ -151,8 +153,14 @@ export default function VerifyOtpScreen() {
         if (!token) throw new Error("Missing Firebase credentials after verification.");
         const session = await exchangeFirebaseIdTokenForJwt(token);
         await saveCustomerSessionTokens(session.accessToken, session.refreshToken);
+        if (!session.profileComplete) {
+          await saveOnboardingSession({
+            uid: session.uid,
+            phoneNumber: session.phoneNumber,
+          });
+        }
         clearFlow();
-        router.replace(HOME);
+        router.replace(session.profileComplete ? HOME : SAVE_DETAILS);
       } catch (e) {
         Alert.alert("Sign-in incomplete", describeVerifyError(e));
       } finally {
