@@ -249,6 +249,37 @@ If sign-in fails, see [Troubleshooting](#8-troubleshooting) below.
 
 ---
 
+## 7.1 Razorpay (Cart → Pay now)
+
+Payments need Razorpay test keys on the **server** and a **native dev client** rebuild after installing `react-native-razorpay`.
+
+1. In `apps/server/.env` (see `apps/server/.env.example`):
+
+   ```env
+   RAZORPAY_KEY_ID=rzp_test_xxxxxxxx
+   RAZORPAY_KEY_SECRET=your_secret
+   ```
+
+2. Optional in `apps/mobile/.env` (public key id only):
+
+   ```env
+   EXPO_PUBLIC_RAZORPAY_KEY_ID=rzp_test_xxxxxxxx
+   ```
+
+3. Rebuild the dev client (not Expo Go). After adding `react-native-razorpay`, you must regenerate native projects:
+
+   ```powershell
+   cd apps/mobile
+   npx expo prebuild --clean
+   npx expo run:android
+   ```
+
+   If Pay now shows *"Cannot read property 'open' of null"*, the Razorpay native module is not in your current build — run the commands above and open the newly installed app (not Expo Go).
+
+4. On the cart screen, tap **Pay now** → Razorpay checkout → on success you land on the order confirmation screen.
+
+---
+
 ## 8. Troubleshooting
 
 ### “Could not reach the server. Check your network and API base URL.”

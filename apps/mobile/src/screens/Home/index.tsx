@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo } from "react";
 import {
+  ActivityIndicator,
   Image,
   type ImageSourcePropType,
   Pressable,
@@ -12,6 +14,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import { BottomNavbar, getBottomNavbarPillMetrics } from "@/src/components/bottom-navbar";
+import {
+  HomeServiceCard,
+  catalogToHomeServiceCard,
+} from "@/src/components/home-service-card";
+import { useServicesCatalog } from "@/src/hooks/use-services-catalog";
+import { formatHomeGreeting } from "@/src/lib/format-home-greeting";
+import { useCustomerProfile } from "@/src/stores/customer-profile";
 
 const DESIGN_W = 1080;
 
@@ -35,15 +44,7 @@ function truncateCtaDescription(text: string, maxChars = CTA_DESCRIPTION_MAX_CHA
 
 const swirlArrow = require("@/assets/images/home/swirl-arrow-colored.png");
 
-const service1 = require("@/assets/images/home/service-1.png");
-const service2 = require("@/assets/images/home/service-2.png");
-const service3 = require("@/assets/images/home/service-3.png");
-// Arrow circle colors for service cards (rendered via LinearGradient)
-const ARROW_GRADIENTS = {
-  orange: { from: "#FFDFA9", to: "#EA9400" },
-  blue: { from: "#C8DEFF", to: "#064BB3" },
-  purple: { from: "#F0C8FF", to: "#F67CFF" },
-} as const;
+const POPULAR_SERVICES_LIMIT = 6;
 
 const CTA_PLACEHOLDER_DESCRIPTION =
   "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi mollitia commodi neque dolore ea similique, modi odio assumenda enim quas, ab a laboriosam facere? Eum tenetur illo maxime nisi tempore!";
@@ -52,46 +53,6 @@ const catThumb1 = require("@/assets/images/home/category-thumb-1.png");
 const catThumb2 = require("@/assets/images/home/category-thumb-2.png");
 
 // Decorative background ellipses are rendered via react-native-svg
-
-type ServiceItem = {
-  id: string;
-  title: string;
-  desc: string;
-  image: ImageSourcePropType;
-  arrowGradient: keyof typeof ARROW_GRADIENTS;
-  bg: string;
-  border: string;
-};
-
-const SERVICES: ServiceItem[] = [
-  {
-    id: "ve",
-    title: "video editing",
-    desc: "popular We sent a verification 5 digit code on your number.",
-    image: service1,
-    arrowGradient: "orange",
-    bg: "#fffaef",
-    border: "#ea9400",
-  },
-  {
-    id: "dm",
-    title: "digital marketing",
-    desc: "popular We sent a verification 5 digit code on your number.",
-    image: service2,
-    arrowGradient: "blue",
-    bg: "#f5f9ff",
-    border: "#064bb3",
-  },
-  {
-    id: "dm2",
-    title: "digital marketing",
-    desc: "popular We sent a verification 5 digit code on your number.",
-    image: service3,
-    arrowGradient: "purple",
-    bg: "#fffaff",
-    border: "#f67cff",
-  },
-];
 
 type CategoryItem = {
   id: string;
@@ -116,118 +77,6 @@ const CATEGORIES_DATA: CategoryItem[] = [
 ];
 
 const PILLS = ["All", "Video Editing", "Marketing", "Design"] as const;
-
-function ServiceCard({
-  svc,
-  s,
-}: {
-  svc: ServiceItem;
-  s: (v: number) => number;
-}) {
-  const imageInset = s(19);
-  const imageRadius = s(32);
-  const imageHeight = s(250);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={svc.title}
-      style={{
-        width: s(408),
-        backgroundColor: svc.bg,
-        borderRadius: s(46),
-        borderWidth: 1,
-        borderColor: svc.border,
-        overflow: "hidden",
-        borderCurve: "continuous",
-      }}
-    >
-      <View style={{ padding: imageInset }}>
-        <View
-          style={{
-            height: imageHeight,
-            borderRadius: imageRadius,
-            overflow: "hidden",
-            borderCurve: "continuous",
-          }}
-        >
-          <Image
-            source={svc.image}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-        </View>
-      </View>
-      <View
-        style={{
-          paddingHorizontal: imageInset,
-          paddingTop: s(4),
-          paddingBottom: s(18),
-        }}
-      >
-        <Text
-          style={{
-            fontFamily: "Poppins_500Medium",
-            fontSize: s(38),
-            lineHeight: s(55),
-            color: "#262626",
-            textTransform: "capitalize",
-            letterSpacing: -s(1.5),
-          }}
-        >
-          {svc.title}
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={{
-            fontFamily: "Poppins_400Regular",
-            fontSize: s(24),
-            lineHeight: s(23),
-            color: "#999",
-            alignSelf: "stretch",
-            textTransform: "capitalize",
-            letterSpacing: -s(1.5),
-          }}
-        >
-          {svc.desc}
-        </Text>
-        <View style={{ alignSelf: "flex-end", marginTop: s(4) }}>
-          <View
-            style={{
-              width: s(80),
-              height: s(80),
-              borderRadius: s(40),
-              overflow: "hidden",
-              boxShadow: "5px 5px 15px rgba(0,0,0,0.14)",
-            }}
-          >
-            <LinearGradient
-              colors={[
-                ARROW_GRADIENTS[svc.arrowGradient].from,
-                ARROW_GRADIENTS[svc.arrowGradient].to,
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                width: "100%",
-                height: "100%",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name="arrow-up"
-                size={s(32)}
-                color="#fff"
-                style={{ transform: [{ rotate: "45deg" }] }}
-              />
-            </LinearGradient>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
 
 function CategoryCard({
   cat,
@@ -299,9 +148,34 @@ function CategoryCard({
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const s = (v: number) => (v * width) / DESIGN_W;
+  const displayName = useCustomerProfile((state) => state.name);
+  const greeting = formatHomeGreeting(displayName);
+
+  const { services, status: catalogStatus } = useServicesCatalog("");
+
+  const popularServiceCards = useMemo(
+    () =>
+      services
+        .filter((svc) => svc.isAvailable)
+        .slice(0, POPULAR_SERVICES_LIMIT)
+        .map((svc, index) => catalogToHomeServiceCard(svc, index)),
+    [services],
+  );
+
+  const openServiceDetail = useCallback(
+    (serviceId: string) => {
+      router.push({ pathname: "/service/[id]", params: { id: serviceId } });
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    void useCustomerProfile.getState().refresh();
+  }, []);
 
   const padH = s(52);
   const { barH: navbarH } = getBottomNavbarPillMetrics(width, s);
@@ -367,7 +241,6 @@ export default function HomeScreen() {
           }}
         >
 
-          {/* Greeting hard coded name, TODO: Add dynamic name from user session*/ }
           <Text
             style={{
               fontFamily: "Poppins_500Medium",
@@ -377,7 +250,7 @@ export default function HomeScreen() {
               textTransform: "capitalize",
             }}
           >
-            hey! rahul
+            {greeting}
           </Text>
 
           {/* Notification and Menu buttons */}
@@ -703,7 +576,12 @@ export default function HomeScreen() {
           >
             popular sevices
           </Text>
-          <Pressable accessibilityRole="button" hitSlop={8}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="See all services"
+            hitSlop={8}
+            onPress={() => router.push("/(tabs)/search-tab")}
+          >
             <Text
               style={{
                 fontFamily: "Poppins_400Regular",
@@ -723,11 +601,22 @@ export default function HomeScreen() {
             paddingHorizontal: padH,
             gap: s(20),
             paddingTop: s(30),
+            alignItems: catalogStatus === "loading" ? "center" : undefined,
+            minHeight: catalogStatus === "loading" ? s(200) : undefined,
           }}
         >
-          {SERVICES.map((svc) => (
-            <ServiceCard key={svc.id} svc={svc} s={s} />
-          ))}
+          {catalogStatus === "loading" ? (
+            <ActivityIndicator size="large" color="#165d75" />
+          ) : (
+            popularServiceCards.map((svc) => (
+              <HomeServiceCard
+                key={svc.id}
+                svc={svc}
+                s={s}
+                onPress={() => openServiceDetail(svc.id)}
+              />
+            ))
+          )}
         </ScrollView>
 
         {/* ——— Categories ——— */}

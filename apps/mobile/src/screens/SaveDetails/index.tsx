@@ -50,7 +50,10 @@ import {
   formatProfileApiError,
   saveCustomerProfile,
 } from "@/src/services/profile-api";
-import { loadAccessToken } from "@/src/services/session-tokens";
+import { useAuthNavigationGuard } from "@/src/hooks/use-auth-navigation-guard";
+import { saveProfileCompleteFlag } from "@/src/services/session-meta";
+import { useAuthSession } from "@/src/stores/auth-session";
+import { useCustomerProfile } from "@/src/stores/customer-profile";
 
 const HOME = "/(tabs)/home-tab" as Href;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,6 +64,8 @@ function nationalDigitsFromE164(e164: string): string {
 
 export default function SaveDetailsScreen() {
   const router = useRouter();
+  useAuthNavigationGuard("require-incomplete-profile");
+  const markAuthenticated = useAuthSession((s) => s.markAuthenticated);
   const [session, setSession] = useState<{
     uid: string;
     phoneNumber: string;
@@ -84,20 +89,14 @@ export default function SaveDetailsScreen() {
   useFocusEffect(
     useCallback(() => {
       void (async () => {
-        const token = await loadAccessToken();
-        if (!token) {
-          router.replace("/(auth)/login");
-          return;
-        }
         const pending = await loadOnboardingSession();
         if (!pending) {
-          router.replace(HOME);
           return;
         }
         setSession(pending);
         setAvatarSeed((current) => current ?? pickRandomAvatarSeed());
       })();
-    }, [router])
+    }, [])
   );
 
   const avatarUrl = useMemo(
@@ -119,14 +118,17 @@ export default function SaveDetailsScreen() {
     void (async () => {
       setBusy(true);
       try {
-        await saveCustomerProfile({
+        const profile = await saveCustomerProfile({
           name: name.trim(),
           phoneNumber: session.phoneNumber,
           email: email.trim() || undefined,
           address: address.trim() || undefined,
           avatarUrl,
         });
+        await useCustomerProfile.getState().setProfile(profile);
         await clearOnboardingSession();
+        await saveProfileCompleteFlag(true);
+        markAuthenticated(true);
         router.replace(HOME);
       } catch (e) {
         Alert.alert("Could not save", formatProfileApiError(e));

@@ -14,6 +14,9 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import "@/src/lib/ensure-auth-bootstrap";
+import { useAuthSession } from "@/src/stores/auth-session";
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -24,14 +27,16 @@ export default function RootLayout() {
     Poppins_500Medium,
     Poppins_600SemiBold,
   });
+  const authStatus = useAuthSession((s) => s.status);
+  const ready = fontsLoaded && authStatus !== "bootstrapping";
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
+    if (ready) {
+      void SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [ready]);
 
-  if (!fontsLoaded) {
+  if (!ready) {
     return null;
   }
 
@@ -39,8 +44,16 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" options={{ animation: "fade" }} />
+        <Stack.Screen name="index" options={{ animation: "none" }} />
+        <Stack.Screen name="start" options={{ animation: "fade" }} />
         <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+        <Stack.Screen name="service/[id]" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="checkout" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="edit-profile" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="saved-address" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="my-orders" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="help-center" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="terms-privacy" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="(auth)" />
       </Stack>
     </SafeAreaProvider>

@@ -1,7 +1,6 @@
 import axios from "axios";
 
-import { getApiBaseUrl } from "@/src/lib/api-base-url";
-import { loadAccessToken } from "@/src/services/session-tokens";
+import { apiClient } from "@/src/services/api-client";
 
 export type CustomerProfile = {
   uid: string;
@@ -34,24 +33,21 @@ export function formatProfileApiError(e: unknown): string {
   return "Could not save your details.";
 }
 
+export async function getCustomerProfile(): Promise<CustomerProfile | null> {
+  const { data } = await apiClient.get<{
+    profile: CustomerProfile | null;
+    profileComplete: boolean;
+  }>("/api/profile/me");
+
+  return data.profile;
+}
+
 export async function saveCustomerProfile(
   payload: SaveProfilePayload
 ): Promise<CustomerProfile> {
-  const token = await loadAccessToken();
-  if (!token) {
-    throw new Error("You are not signed in. Please verify your phone again.");
-  }
-
-  const { data } = await axios.put<{ profile: CustomerProfile }>(
-    `${getApiBaseUrl()}/api/profile/me`,
-    payload,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      timeout: 25_000,
-    }
+  const { data } = await apiClient.put<{ profile: CustomerProfile }>(
+    "/api/profile/me",
+    payload
   );
 
   return data.profile;

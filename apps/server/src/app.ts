@@ -6,6 +6,8 @@ import { adsRouter } from "./routes/ads.js";
 import { echoRouter } from "./routes/echo.js";
 import { authRouter } from "./routes/auth.js";
 import { profileRouter } from "./routes/profile.js";
+import { paymentsRouter } from "./routes/payments.js";
+import { servicesRouter } from "./routes/services.js";
 
 export function createApp(): Application {
   const app = express();
@@ -35,7 +37,13 @@ export function createApp(): Application {
         "/api/ads/:id",
         "/api/echo",
         "/api/auth/firebase-exchange",
+        "/api/auth/refresh",
+        "/api/auth/logout",
         "/api/profile/me",
+        "/api/services",
+        "/api/services/:id",
+        "/api/payments/create-order",
+        "/api/payments/verify",
       ],
     });
   });
@@ -45,6 +53,8 @@ export function createApp(): Application {
   app.use("/api/echo", echoRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/profile", profileRouter);
+  app.use("/api/services", servicesRouter);
+  app.use("/api/payments", paymentsRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: "Not Found", path: req.originalUrl });

@@ -4,7 +4,14 @@ import {
   getCustomerProfile,
   isProfileComplete,
 } from "../lib/customer-profiles.js";
+import {
+  getJwtSecrets,
+  signCustomerAccessToken,
+  signCustomerRefreshToken,
+  verifyCustomerRefreshToken,
+} from "../lib/customer-jwt.js";
 import { ensureFirebaseAdmin, verifyFirebaseCustomerIdToken } from "../lib/firebase-admin.js";
+import { requireCustomerJwt } from "../middleware/require-customer-jwt.js";
 
 export const authRouter: IRouter = Router();
 
@@ -22,10 +29,8 @@ authRouter.post("/firebase-exchange", async (req, res, next) => {
       return;
     }
 
-    const accessSecret = process.env.JWT_ACCESS_SECRET?.trim();
-    const refreshSecret = process.env.JWT_REFRESH_SECRET?.trim();
-
-    if (!accessSecret || !refreshSecret) {
+    const secrets = getJwtSecrets();
+    if (!secrets) {
       res.status(503).json({
         error: "jwt_unconfigured",
         message:
@@ -61,26 +66,8 @@ authRouter.post("/firebase-exchange", async (req, res, next) => {
     }
 
     const sub = decoded.uid;
-    const accessToken = jwt.sign(
-      {
-        role: "ROLE_CUSTOMER",
-        phone_number: phone,
-      },
-      accessSecret,
-      {
-        subject: sub,
-        expiresIn: "15m",
-      },
-    );
-
-    const refreshToken = jwt.sign(
-      { token_use: "refresh" },
-      refreshSecret,
-      {
-        subject: sub,
-        expiresIn: "30d",
-      },
-    );
+    const accessToken = signCustomerAccessToken(sub, phone, secrets.accessSecret);
+    const refreshToken = signCustomerRefreshToken(sub, phone, secrets.refreshSecret);
 
     const existingProfile = await getCustomerProfile(sub);
 
@@ -95,4 +82,60 @@ authRouter.post("/firebase-exchange", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+authRouter.post("/refresh", async (req, res, next) => {
+  try {
+    const secrets = getJwtSecrets();
+    if (!secrets) {
+      res.status(503).json({
+        error: "jwt_unconfigured",
+        message:
+          "Set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET in the server environment.",
+      });
+      return;
+    }
+
+    const refreshRaw = req.body?.refreshToken;
+    const refreshToken =
+      typeof refreshRaw === "string" ? refreshRaw.trim() : "";
+
+    if (!refreshToken) {
+      res.status(400).json({
+        error: "missing_refresh_token",
+        message: "Expected refreshToken in JSON body.",
+      });
+      return;
+    }
+
+    let decoded: jwt.JwtPayload;
+    try {
+      decoded = verifyCustomerRefreshToken(refreshToken, secrets.refreshSecret);
+    } catch {
+      res.status(401).json({
+        error: "invalid_refresh_token",
+        message: "Refresh token is invalid or expired.",
+      });
+      return;
+    }
+
+    const sub = decoded.sub!;
+    const phone = decoded.phone_number as string;
+
+    const accessToken = signCustomerAccessToken(sub, phone, secrets.accessSecret);
+    const nextRefreshToken = signCustomerRefreshToken(sub, phone, secrets.refreshSecret);
+
+    res.json({
+      accessToken,
+      refreshToken: nextRefreshToken,
+      expiresIn: 900,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.post("/logout", requireCustomerJwt, async (_req, res) => {
+  // Stateless JWT: client clears tokens; endpoint exists for symmetry and future revocation.
+  res.status(204).send();
 });

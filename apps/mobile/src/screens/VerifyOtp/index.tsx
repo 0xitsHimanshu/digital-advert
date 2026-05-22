@@ -35,7 +35,10 @@ import {
 } from "@/src/services/auth-api";
 import { mapPhoneAuthError, sendSmsPhoneOtp } from "@/src/services/phone-auth";
 import { saveOnboardingSession } from "@/src/services/onboarding-session";
+import { saveProfileCompleteFlag } from "@/src/services/session-meta";
 import { saveCustomerSessionTokens } from "@/src/services/session-tokens";
+import { useAuthSession } from "@/src/stores/auth-session";
+import { useCustomerProfile } from "@/src/stores/customer-profile";
 import { usePhoneAuthFlow } from "@/src/stores/phone-auth-flow";
 
 const OTP_LEN = 6;
@@ -61,6 +64,7 @@ export default function VerifyOtpScreen() {
   const e164Phone = usePhoneAuthFlow((s) => s.e164Phone);
   const setPhoneSession = usePhoneAuthFlow((s) => s.setSession);
   const clearFlow = usePhoneAuthFlow((s) => s.clear);
+  const markAuthenticated = useAuthSession((s) => s.markAuthenticated);
 
   const [digits, setDigits] = useState<string[]>(() =>
     Array(OTP_LEN).fill("")
@@ -153,6 +157,7 @@ export default function VerifyOtpScreen() {
         if (!token) throw new Error("Missing Firebase credentials after verification.");
         const session = await exchangeFirebaseIdTokenForJwt(token);
         await saveCustomerSessionTokens(session.accessToken, session.refreshToken);
+        await saveProfileCompleteFlag(session.profileComplete);
         if (!session.profileComplete) {
           await saveOnboardingSession({
             uid: session.uid,
@@ -160,6 +165,10 @@ export default function VerifyOtpScreen() {
           });
         }
         clearFlow();
+        markAuthenticated(session.profileComplete);
+        if (session.profileComplete) {
+          void useCustomerProfile.getState().refresh();
+        }
         router.replace(session.profileComplete ? HOME : SAVE_DETAILS);
       } catch (e) {
         Alert.alert("Sign-in incomplete", describeVerifyError(e));

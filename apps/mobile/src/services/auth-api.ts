@@ -11,6 +11,25 @@ export type FirebaseExchangeResponse = {
   profileComplete: boolean;
 };
 
+export type RefreshSessionResponse = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+};
+
+export type CustomerProfileResponse = {
+  profile: {
+    uid: string;
+    name: string;
+    phoneNumber: string;
+    email?: string;
+    address?: string;
+    avatarUrl: string;
+    updatedAt: string;
+  } | null;
+  profileComplete: boolean;
+};
+
 export function formatAuthApiError(e: unknown): string {
   if (axios.isAxiosError(e)) {
     const data = e.response?.data as { message?: string } | undefined;
@@ -27,6 +46,16 @@ export function formatAuthApiError(e: unknown): string {
   return "Could not complete sign-in.";
 }
 
+export function isAuthHttpError(e: unknown): boolean {
+  if (!axios.isAxiosError(e) || e.response == null) return false;
+  const status = e.response.status;
+  return status === 401 || status === 403;
+}
+
+export function isNetworkError(e: unknown): boolean {
+  return axios.isAxiosError(e) && e.response == null;
+}
+
 export async function exchangeFirebaseIdTokenForJwt(
   idToken: string
 ): Promise<FirebaseExchangeResponse> {
@@ -35,6 +64,47 @@ export async function exchangeFirebaseIdTokenForJwt(
     { idToken },
     {
       headers: { "Content-Type": "application/json" },
+      timeout: 25_000,
+    }
+  );
+  return data;
+}
+
+export async function refreshCustomerSession(
+  refreshToken: string
+): Promise<RefreshSessionResponse> {
+  const { data } = await axios.post<RefreshSessionResponse>(
+    `${getApiBaseUrl()}/api/auth/refresh`,
+    { refreshToken },
+    {
+      headers: { "Content-Type": "application/json" },
+      timeout: 25_000,
+    }
+  );
+  return data;
+}
+
+export async function logoutCustomer(accessToken: string): Promise<void> {
+  await axios.post(
+    `${getApiBaseUrl()}/api/auth/logout`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      timeout: 25_000,
+      validateStatus: (status) => status === 204 || status === 200,
+    }
+  );
+}
+
+export async function fetchCustomerProfileMe(
+  accessToken: string
+): Promise<CustomerProfileResponse> {
+  const { data } = await axios.get<CustomerProfileResponse>(
+    `${getApiBaseUrl()}/api/profile/me`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
       timeout: 25_000,
     }
   );

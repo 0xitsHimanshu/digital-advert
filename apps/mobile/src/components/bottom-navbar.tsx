@@ -3,8 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Platform, Pressable, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
+
+import { selectCartItemCount, useCart } from "@/src/stores/cart";
 
 type TabKey = "home" | "search" | "cart" | "profile";
 
@@ -202,7 +204,11 @@ export function BottomNavbar({
 }: BottomNavbarProps) {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
+  const cartItemCount = useCart(selectCartItemCount);
+  const showCartBadge = cartItemCount > 0;
+  const cartBadgeLabel = cartItemCount > 99 ? "99+" : String(cartItemCount);
   const iconColor = "#165D75";
+  const cartIconSize = s(64);
   const { barW, barH, pillRadius, horizontalInset } = getBottomNavbarPillMetrics(
     windowWidth,
     s,
@@ -311,16 +317,58 @@ export function BottomNavbar({
 
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Cart"
+                accessibilityLabel={
+                  showCartBadge ? `Cart, ${cartItemCount} items` : "Cart"
+                }
                 hitSlop={8}
                 onPress={() => router.push("/(tabs)/cart-tab")}
                 style={{ alignItems: "center", justifyContent: "center" }}
               >
-                <Ionicons
-                  name={activeTab === "cart" ? "cart" : "cart-outline"}
-                  size={s(64)}
-                  color={iconColor}
-                />
+                <View
+                  style={{
+                    width: cartIconSize,
+                    height: cartIconSize,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name={activeTab === "cart" ? "cart" : "cart-outline"}
+                    size={cartIconSize}
+                    color={iconColor}
+                  />
+                  {showCartBadge ? (
+                    <View
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                      style={{
+                        position: "absolute",
+                        top: s(0),
+                        right: s(-4),
+                        minWidth: s(36),
+                        height: s(36),
+                        borderRadius: s(18),
+                        paddingHorizontal: s(6),
+                        backgroundColor: "#ffcd47",
+                        borderWidth: s(2.5),
+                        borderColor: "#fffdf8",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: "Poppins_600SemiBold",
+                          fontSize: s(20),
+                          lineHeight: s(22),
+                          color: "#212121",
+                        }}
+                      >
+                        {cartBadgeLabel}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               </Pressable>
 
               <Pressable
