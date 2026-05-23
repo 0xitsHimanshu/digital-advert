@@ -1,3 +1,4 @@
+import { APP_CURRENCY, localeForCurrency, normalizeCatalogCurrency } from "@/src/lib/app-currency";
 import type { CartLine } from "@/src/types/cart";
 import type { CartCoupon } from "@/src/types/cart-coupon";
 
@@ -22,7 +23,8 @@ export function sumLineCents(lines: CartLine[]): number {
 }
 
 export function resolveCartCurrency(lines: CartLine[]): string {
-  return lines.find((l) => l.service.currency)?.service.currency ?? "USD";
+  const raw = lines.find((l) => l.service.currency)?.service.currency;
+  return normalizeCatalogCurrency(raw ?? APP_CURRENCY);
 }
 
 export function computeDiscountCents(
@@ -76,14 +78,15 @@ export function computeCartTotals(
 }
 
 export function formatCartMoney(cents: number, currency: string): string {
+  const code = normalizeCatalogCurrency(currency);
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(localeForCurrency(code), {
       style: "currency",
-      currency,
+      currency: code,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(cents / 100);
   } catch {
-    return `${(cents / 100).toFixed(2)} ${currency}`;
+    return `${(cents / 100).toFixed(2)} ${code}`;
   }
 }

@@ -83,7 +83,10 @@ export function useRazorpayCheckout({
         currency: orderPayload.currency,
         order_id: orderPayload.razorpayOrderId,
         name: "Digital Advert",
-        description: "Cart checkout",
+        description:
+          lines.length === 1
+            ? `Checkout — ${lines[0]!.service.title}`
+            : "Cart checkout",
         prefill: {
           name: profileName ?? undefined,
           email: profileEmail ?? undefined,

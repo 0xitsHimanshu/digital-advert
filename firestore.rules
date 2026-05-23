@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public catalog — read-only for clients; writes via Admin SDK on the server.
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Customer profile — only the signed-in user.
+    match /customers/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Orders belong to the customer; scoped by Firebase uid (same as JWT sub).
+      match /orders/{orderId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

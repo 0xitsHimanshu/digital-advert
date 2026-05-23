@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
@@ -40,6 +40,13 @@ export default function CartScreen() {
   const itemCount = useCart(selectCartItemCount);
   const setQuantity = useCart((state) => state.setQuantity);
   const removeService = useCart((state) => state.removeService);
+  const syncFromCatalog = useCart((state) => state.syncFromCatalog);
+
+  useFocusEffect(
+    useCallback(() => {
+      void syncFromCatalog();
+    }, [syncFromCatalog]),
+  );
 
   const [couponsVisible, setCouponsVisible] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<CartCoupon | null>(null);

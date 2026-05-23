@@ -3,10 +3,14 @@ import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
 
 import { priceCart, type CartLineInput } from "../lib/cart-pricing.js";
+import { getCustomerProfile } from "../lib/customer-profiles.js";
+import { buildDefaultOrderUpdates } from "../lib/order-updates.js";
 import {
   createPaymentOrder,
-  getPaymentOrder,
+  getPaymentOrderById,
   getPaymentOrderByRazorpayId,
+  getPaymentOrderForCustomer,
+  listPaidOrdersByCustomer,
   updatePaymentOrder,
 } from "../lib/payment-orders.js";
 import {
@@ -14,11 +18,75 @@ import {
   getRazorpayConfig,
   verifyRazorpayPaymentSignature,
 } from "../lib/razorpay.js";
+import { fetchRazorpayPaymentMethodLabel } from "../lib/razorpay-payment-method.js";
 import { requireCustomerJwt } from "../middleware/require-customer-jwt.js";
 
 export const paymentsRouter: IRouter = Router();
 
 paymentsRouter.use(requireCustomerJwt);
+
+paymentsRouter.get("/orders", async (req, res, next) => {
+  try {
+    const customerId = req.customer!.sub;
+    const orders = await listPaidOrdersByCustomer(customerId);
+    res.json({ count: orders.length, orders });
+  } catch (e) {
+    next(e);
+  }
+});
+
+paymentsRouter.get("/orders/:orderId", async (req, res, next) => {
+  try {
+    const customerId = req.customer!.sub;
+    const orderId =
+      typeof req.params.orderId === "string" ? req.params.orderId : "";
+
+    const order = await getPaymentOrderForCustomer(customerId, orderId);
+    if (!order || order.customerId !== customerId) {
+      res.status(404).json({
+        error: "order_not_found",
+        message: "Order not found.",
+      });
+      return;
+    }
+
+    let updates = order.updates;
+    if (!updates?.length) {
+      const profile = await getCustomerProfile(customerId);
+      updates = buildDefaultOrderUpdates(profile?.phoneNumber);
+      if (order.status === "PAID") {
+        await updatePaymentOrder(customerId, orderId, { updates });
+      }
+    }
+
+    let paymentMethod = order.paymentMethod;
+    const razorpay = createRazorpayClient();
+    if (razorpay && order.razorpayPaymentId) {
+      try {
+        const resolved = await fetchRazorpayPaymentMethodLabel(
+          razorpay,
+          order.razorpayPaymentId,
+        );
+        paymentMethod = resolved;
+        if (order.status === "PAID" && resolved !== order.paymentMethod) {
+          await updatePaymentOrder(customerId, orderId, { paymentMethod: resolved });
+        }
+      } catch {
+        // Keep stored label when Razorpay is unreachable.
+      }
+    }
+
+    res.json({
+      order: {
+        ...order,
+        paymentMethod,
+        updates,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
 function parseCartItems(body: unknown): CartLineInput[] | null {
   if (!Array.isArray(body)) return null;
@@ -66,7 +134,7 @@ paymentsRouter.post("/create-order", async (req, res, next) => {
       typeof req.body?.couponCode === "string" ? req.body.couponCode : undefined;
     const adDiscountUnlocked = req.body?.adDiscountUnlocked === true;
 
-    const priced = priceCart(items, { couponCode, adDiscountUnlocked });
+    const priced = await priceCart(items, { couponCode, adDiscountUnlocked });
     if ("error" in priced) {
       res.status(400).json({ error: "validation_error", message: priced.error });
       return;
@@ -80,6 +148,7 @@ paymentsRouter.post("/create-order", async (req, res, next) => {
       return;
     }
 
+    const customerId = req.customer!.sub;
     const orderId = randomUUID();
     const receipt = orderId.replace(/-/g, "").slice(0, 40);
 
@@ -89,13 +158,13 @@ paymentsRouter.post("/create-order", async (req, res, next) => {
       receipt,
       notes: {
         internal_order_id: orderId,
-        customer_id: req.customer!.sub,
+        customer_id: customerId,
       },
     });
 
-    createPaymentOrder({
+    await createPaymentOrder({
       id: orderId,
-      customerId: req.customer!.sub,
+      customerId,
       razorpayOrderId: razorpayOrder.id,
       amountCents: priced.totalCents,
       currency: priced.currency,
@@ -157,13 +226,14 @@ paymentsRouter.post("/verify", async (req, res, next) => {
       return;
     }
 
+    const customerId = req.customer!.sub;
     const order =
-      getPaymentOrderByRazorpayId(razorpayOrderId) ??
+      (await getPaymentOrderByRazorpayId(razorpayOrderId)) ??
       (typeof req.body?.orderId === "string"
-        ? getPaymentOrder(req.body.orderId)
-        : undefined);
+        ? await getPaymentOrderById(req.body.orderId)
+        : null);
 
-    if (!order || order.customerId !== req.customer!.sub) {
+    if (!order || order.customerId !== customerId) {
       res.status(404).json({
         error: "order_not_found",
         message: "Order not found.",
@@ -179,7 +249,7 @@ paymentsRouter.post("/verify", async (req, res, next) => {
     );
 
     if (!valid) {
-      updatePaymentOrder(order.id, { status: "PAYMENT_FAILED" });
+      await updatePaymentOrder(customerId, order.id, { status: "PAYMENT_FAILED" });
       res.status(400).json({
         error: "invalid_signature",
         message: "Payment verification failed.",
@@ -187,10 +257,27 @@ paymentsRouter.post("/verify", async (req, res, next) => {
       return;
     }
 
-    const paid = updatePaymentOrder(order.id, {
+    const profile = await getCustomerProfile(customerId);
+
+    let paymentMethod = "Online Payment";
+    const razorpayClient = createRazorpayClient();
+    if (razorpayClient) {
+      try {
+        paymentMethod = await fetchRazorpayPaymentMethodLabel(
+          razorpayClient,
+          razorpayPaymentId,
+        );
+      } catch {
+        // Fall back when payment fetch fails after signature verification.
+      }
+    }
+
+    const paid = await updatePaymentOrder(customerId, order.id, {
       status: "PAID",
       paidAt: new Date().toISOString(),
       razorpayPaymentId,
+      paymentMethod,
+      updates: buildDefaultOrderUpdates(profile?.phoneNumber),
     });
 
     res.json({

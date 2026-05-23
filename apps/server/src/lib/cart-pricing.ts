@@ -49,10 +49,10 @@ function computeDiscountCents(
   return Math.min(discount, subtotalCents);
 }
 
-export function priceCart(
+export async function priceCart(
   items: CartLineInput[],
   options?: { couponCode?: string; adDiscountUnlocked?: boolean },
-): CartPricing | { error: string } {
+): Promise<CartPricing | { error: string }> {
   if (!items.length) {
     return { error: "Cart is empty." };
   }
@@ -66,7 +66,7 @@ export function priceCart(
       return { error: "Invalid quantity." };
     }
 
-    const service = getCatalogService(item.serviceId);
+    const service = await getCatalogService(item.serviceId);
     if (!service?.isAvailable) {
       return { error: `Service unavailable: ${item.serviceId}` };
     }
@@ -100,7 +100,7 @@ export function priceCart(
 
   return {
     lines,
-    currency: currency ?? "USD",
+    currency: currency ?? "INR",
     subtotalCents,
     discountCents,
     taxCents,

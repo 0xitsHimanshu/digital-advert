@@ -44,6 +44,8 @@ export function createApp(): Application {
         "/api/services/:id",
         "/api/payments/create-order",
         "/api/payments/verify",
+        "/api/payments/orders",
+        "/api/payments/orders/:orderId",
       ],
     });
   });

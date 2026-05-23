@@ -52,6 +52,7 @@ export default function RootLayout() {
         <Stack.Screen name="edit-profile" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="saved-address" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="my-orders" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="order/[id]" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="help-center" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="terms-privacy" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="(auth)" />

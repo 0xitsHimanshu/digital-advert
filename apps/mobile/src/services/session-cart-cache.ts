@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
+import { normalizeCatalogService } from "@/src/lib/app-currency";
 import type { CartLine } from "@/src/types/cart";
 import type { CatalogService } from "@/src/types/service";
 
@@ -35,7 +36,11 @@ function parseCartLines(raw: string): CartLine[] {
           : 0;
       if (!serviceId || quantity <= 0 || !isCatalogService(row.service)) continue;
       if (row.service.id !== serviceId) continue;
-      lines.push({ serviceId, quantity, service: row.service });
+      lines.push({
+        serviceId,
+        quantity,
+        service: normalizeCatalogService(row.service),
+      });
     }
     return lines;
   } catch {

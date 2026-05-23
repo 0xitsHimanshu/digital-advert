@@ -20,6 +20,7 @@ import {
   HomeServiceCard,
   catalogToHomeServiceCard,
 } from "@/src/components/home-service-card";
+import { formatServicePrice } from "@/src/lib/format-price";
 import {
   formatServicesApiError,
   getCatalogService,
@@ -185,7 +186,22 @@ export default function ServiceDetailScreen() {
   );
 
   const buyNowBarHeight = s(146);
-  const scrollBottomPad = buyNowBarHeight + insets.bottom + s(24);
+  const priceAboveBuyGap = s(12);
+  const priceFontSize = s(45);
+  const priceLineHeight = s(56);
+  const priceRowHeight = priceLineHeight;
+
+  const unitPriceLabel =
+    service != null
+      ? formatServicePrice(service.priceCents, service.currency)
+      : null;
+
+  const scrollBottomPad =
+    buyNowBarHeight +
+    priceRowHeight +
+    priceAboveBuyGap +
+    insets.bottom +
+    s(24);
 
   const handleAddToCart = useCallback(() => {
     if (!service?.isAvailable) return;
@@ -589,7 +605,7 @@ export default function ServiceDetailScreen() {
             </Pressable>
           </View>
 
-          {/* Fixed Buy Now bar (Figma 2228:1052–1055) */}
+          {/* Price + fixed Buy Now bar */}
           <View
             style={{
               position: "absolute",
@@ -598,10 +614,48 @@ export default function ServiceDetailScreen() {
               bottom: insets.bottom + s(16),
             }}
           >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: priceAboveBuyGap,
+                minHeight: priceRowHeight,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: "Poppins_500Medium",
+                  fontSize: priceFontSize,
+                  lineHeight: priceLineHeight,
+                  color: "#1e1e1e",
+                  letterSpacing: -s(1.5),
+                  textTransform: "capitalize",
+                }}
+              >
+                {unitPriceLabel != null ? "price" : "pricing"}
+              </Text>
+              <Text
+                accessibilityRole="text"
+                style={{
+                  fontFamily: "Poppins_600SemiBold",
+                  fontSize: priceFontSize,
+                  lineHeight: priceLineHeight,
+                  color: unitPriceLabel != null ? "#165d75" : "#9f9f9f",
+                  letterSpacing: -s(1.5),
+                }}
+              >
+                {unitPriceLabel ?? "on request"}
+              </Text>
+            </View>
             <Pressable
               disabled={!service.isAvailable}
               accessibilityRole="button"
-              accessibilityLabel="Buy now"
+              accessibilityLabel={
+                unitPriceLabel
+                  ? `Buy now, ${unitPriceLabel}`
+                  : "Buy now, price on request"
+              }
               onPress={handleBuyNow}
               style={({ pressed }) => ({
                 height: buyNowBarHeight,

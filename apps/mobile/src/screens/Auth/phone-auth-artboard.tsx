@@ -706,7 +706,7 @@ export const styles = StyleSheet.create({
   otpFooterMaskFill: {
     width: 1164.202,
     height: 384,
-    backgroundColor: "rgba(17,17,17,0.08)",
+    backgroundColor: "#11111114",
   },
   otpTitle: {
     position: "absolute",

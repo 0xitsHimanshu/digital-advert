@@ -130,21 +130,54 @@ Fill in:
    cd ..\..
    ```
 
+### 4.4 Firestore (services & orders)
+
+The API server uses **Cloud Firestore** (via Firebase Admin) for:
+
+| Collection | Purpose |
+|------------|---------|
+| `services/{serviceId}` | Service catalog (title, price, images) |
+| `customers/{uid}` | Profile fields (name, phone, email, address) |
+| `customers/{uid}/orders/{orderId}` | Orders for that user only (`customerId` = Firebase uid / JWT `sub`) |
+
+On first server start, the `services` collection is **seeded automatically** if it is empty. You can also run:
+
+```powershell
+cd apps\server
+bun run seed:firestore
+```
+
+Deploy rules and indexes (once per Firebase project):
+
+```powershell
+npx -y firebase-tools@latest deploy --only firestore:rules,firestore:indexes
+```
+
+Completed orders shown in **My Orders** come from `GET /api/payments/orders` and only return documents under the signed-in user's `customers/{uid}/orders` path.
+
 ---
 
 ## 5. Build the Android development app (one time, or after native changes)
 
 The mobile app uses a **development build** (not Expo Go), because it includes Firebase native code.
 
-### 5.1 Windows: use a short drive letter (recommended)
+### 5.1 Windows paths (important)
 
-Long folder paths on Windows can break Android builds. Map the project to drive `M:` for builds:
+This app uses **New Architecture** (Reanimated / Worklets). Android codegen **cannot mix two Windows drive letters** (e.g. `M:\` from `subst` and `C:\` from the real path). If you see `this and base files have different roots`, you mixed paths — see [Troubleshooting](#android-codegen-different-roots-m-vs-c).
 
-```powershell
-subst M: C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1
+**Recommended:** clone or work from a **short path on `C:`** only (no `subst`):
+
+```text
+C:\dev\digital-advert-p1
 ```
 
-> Replace the path with **your** actual project path. Run `subst M:` again each time you restart the PC (mapping is not permanent).
+Enable long paths (once, as Administrator):
+
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+```
+
+> Avoid `subst M:` for this repo unless **every** command (install, prebuild, Gradle, Metro, Cursor terminal) uses `M:\` only. Opening the project from `C:\` while building on `M:\` causes codegen failures.
 
 Set Java for this terminal session:
 
@@ -156,10 +189,13 @@ $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 ### 5.2 Install Expo dev client & generate Android project
 
 ```powershell
-cd M:\apps\mobile
+cd C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1\apps\mobile
+.\scripts\verify-android-build-path.ps1
 bun expo install expo-dev-client
 bun expo prebuild --platform android --clean
 ```
+
+Use **your** repo path instead of the example `C:\Users\...` line if different.
 
 ### 5.3 Build and install on the emulator
 
@@ -168,7 +204,7 @@ bun expo prebuild --platform android --clean
 2. Build and run (first time can take **10–15 minutes**):
 
    ```powershell
-   cd M:\apps\mobile\android
+   cd C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1\apps\mobile\android
    .\gradlew.bat app:assembleDebug -x lint -x test
    ```
 
@@ -176,10 +212,10 @@ bun expo prebuild --platform android --clean
 
    ```powershell
    $env:Path = "$env:LOCALAPPDATA\Android\Sdk\platform-tools;$env:Path"
-   adb install -r -d M:\apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+   adb install -r -d android\app\build\outputs\apk\debug\app-debug.apk
    ```
 
-**Shortcut (build + install in one step)** — from `M:\apps\mobile`:
+**Shortcut (build + install in one step)** — from `apps\mobile` (same path as prebuild):
 
 ```powershell
 bun expo run:android
@@ -211,13 +247,12 @@ Keep this terminal open.
 
 ### Terminal B — Mobile app (Metro)
 
-**Windows:** map drive and set Java if you use `M:` for builds:
+**Windows:** set Java, then start Metro from the **same** repo path you used for `prebuild` (do not mix `M:\` and `C:\`):
 
 ```powershell
-subst M: C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1 2>$null
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:Path = "$env:JAVA_HOME\bin;$env:LOCALAPPDATA\Android\Sdk\platform-tools;$env:Path"
-cd M:\apps\mobile
+cd C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1\apps\mobile
 bun expo start --dev-client
 ```
 
@@ -303,13 +338,77 @@ You pasted **`google-services.json`** into the server config by mistake.
 - Ensure `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` are set in `apps/server/.env`.
 - Restart `bun dev` after changing `.env`.
 
+### Android codegen: `different roots` (`M:\` vs `C:\`) {#android-codegen-different-roots-m-vs-c}
+
+Gradle sees codegen under `M:\node_modules\...` but native modules under `C:\Users\...\node_modules\...`. That happens when the repo is opened or prebuilt on **`C:`** but `bun expo run:android` runs from **`M:`** (or the reverse).
+
+**Fix (use one path only):**
+
+```powershell
+# 1) Remove subst drive if you used it
+subst M: /D
+
+# 2) From the REAL repo path on C: (adjust to your machine)
+cd C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1
+
+bun install
+
+cd apps\mobile
+Remove-Item -Recurse -Force android -ErrorAction SilentlyContinue
+.\scripts\verify-android-build-path.ps1
+bun expo prebuild --platform android --clean
+bun expo run:android
+```
+
+Always run **prebuild**, **Gradle**, and **Metro** from the same `apps\mobile` directory. Do not build from `M:\` if Cursor or a terminal used `C:\` for prebuild.
+
 ### Android build fails: `ninja: manifest 'build.ninja' still dirty` or path too long
 
-| Fix | Action |
-|-----|--------|
+Symptom in the log:
+
+```
+ninja: error: Stat(...RNCSafeAreaViewShadowNode.cpp.o): Filename longer than 260 characters
+```
+
+Cause: the React Native New Architecture codegen embeds the **full absolute source path twice** inside `apps\mobile\android\app\.cxx\...`. With the repo at `C:\Users\<name>\Desktop\client-dev\digital-advert-p1\…`, the resulting object-file paths exceed Windows `MAX_PATH` (260). Enabling `LongPathsEnabled=1` alone is not enough because the ninja shipped with the NDK's bundled CMake 3.22 is not long-path-aware.
+
+**Recommended (production-grade) fix — use the wrapper script:**
+
+```powershell
+cd C:\Users\Himanshu\Desktop\client-dev\digital-advert-p1\apps\mobile
+bun run android:win:prebuild
+```
+
+`scripts/build-android.ps1` will:
+
+1. Set `JAVA_HOME` to Android Studio's bundled JBR for this session.
+2. Run `verify-android-build-path.ps1` to enforce a single drive root (no `C:\` ↔ subst mixing) and warn on long paths.
+3. Run `expo prebuild --platform android --clean` (when `-Prebuild` is passed).
+4. Patch the generated `apps/mobile/android/app/build.gradle` to add CMake argument **`-DCMAKE_OBJECT_PATH_MAX=200`**. This makes CMake replace any object-file path longer than 200 chars with a short hashed name, so ninja never has to `Stat` a path that exceeds `MAX_PATH`. The patch is idempotent and re-applied on every prebuild.
+5. Run `expo run:android` (or `gradlew app:assembleDebug` with `-SkipRun`).
+6. Tee the full output to `apps/mobile/logs/android-build-<timestamp>.log`.
+
+> Note: do **not** use `subst` to "shorten" the repo path. Windows/Node/Java's `realpath`/`canonicalPath` resolves a subst drive back to its underlying `C:\…` path, which causes the React Native autolinker to report `this and base files have different roots` and fail codegen. `CMAKE_OBJECT_PATH_MAX` hashing is the correct fix.
+
+Subsequent rebuilds without regenerating native folders:
+
+```powershell
+bun run android:win
+```
+
+**One-time admin tweaks (recommended on every Windows dev box):**
+
+```powershell
+# As Administrator
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+git config --system core.longpaths true
+```
+
+| Other fixes | Action |
+|-------------|--------|
 | Use hoisted install | Keep `bunfig.toml` with `linker = "hoisted"`, then `bun install` from project root |
-| Short path on Windows | Use `subst M:` and build from `M:\apps\mobile` |
-| Clean native build | `cd M:\apps\mobile` → `Remove-Item -Recurse -Force android` → `bun expo prebuild --platform android --clean` |
+| Short clone path | Clone into `C:\dev\digital-advert-p1` so the wrapper isn't required |
+| Clean native build | From `apps\mobile` → delete `android` → `bun run android:win:prebuild` |
 
 ### `JAVA_HOME is not set`
 
@@ -352,9 +451,9 @@ Already fixed in `apps/web/next.config.ts`. Pull latest code and run `bun dev` a
 | Run server + web | `bun dev` |
 | Run server only | `cd apps\server` → `bun run dev` |
 | Start mobile Metro | `cd apps\mobile` → `bun expo start --dev-client` |
-| Rebuild Android APK | `cd M:\apps\mobile\android` → `.\gradlew.bat app:assembleDebug -x lint -x test` |
-| Install APK on emulator | `adb install -r -d M:\apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk` |
-| Map short drive (Windows) | `subst M: C:\path\to\digital-advert-p1` |
+| Rebuild Android APK | `cd apps\mobile\android` → `.\gradlew.bat app:assembleDebug -x lint -x test` |
+| Install APK on emulator | `adb install -r -d apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk` |
+| Verify one Windows path | `cd apps\mobile` → `.\scripts\verify-android-build-path.ps1` |
 | Port forward Metro | `adb reverse tcp:8081 tcp:8081` |
 
 ---

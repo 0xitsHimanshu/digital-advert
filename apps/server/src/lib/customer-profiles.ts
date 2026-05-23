@@ -1,5 +1,6 @@
-import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { ensureFirebaseAdmin } from "./firebase-admin.js";
+import type { Firestore } from "firebase-admin/firestore";
+
+import { getFirestoreDb } from "./firestore-db.js";
 
 export type CustomerProfile = {
   uid: string;
@@ -14,8 +15,7 @@ export type CustomerProfile = {
 const COLLECTION = "customers";
 
 function firestoreOrNull(): Firestore | null {
-  if (ensureFirebaseAdmin()) return null;
-  return getFirestore();
+  return getFirestoreDb();
 }
 
 export function isProfileComplete(profile: CustomerProfile | null): boolean {

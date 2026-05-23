@@ -13,7 +13,7 @@ const line: CartLine = {
     description: "",
     imageUrl: "",
     priceCents: 10000,
-    currency: "USD",
+    currency: "INR",
     isAvailable: true,
   },
 };
@@ -36,5 +36,14 @@ describe("computeCartTotals", () => {
   it("uses ad discount when higher than coupon", () => {
     const discount = computeDiscountCents(20000, CART_COUPONS[0], true);
     expect(discount).toBe(2000);
+  });
+
+  it("resolves legacy USD lines as INR for display", () => {
+    const usdLine: CartLine = {
+      ...line,
+      service: { ...line.service, currency: "USD" },
+    };
+    const totals = computeCartTotals([usdLine], null, false);
+    expect(totals.currency).toBe("INR");
   });
 });

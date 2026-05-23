@@ -30,16 +30,27 @@ describe("session-cart-cache", () => {
   });
 
   it("round-trips cart lines through secure store", async () => {
-    secureStoreMock.getItemAsync.mockResolvedValueOnce(JSON.stringify([validLine]));
+    const inrLine = {
+      ...validLine,
+      service: { ...validLine.service, currency: "INR" },
+    };
+    secureStoreMock.getItemAsync.mockResolvedValueOnce(JSON.stringify([inrLine]));
 
-    await saveCachedCart([validLine]);
+    await saveCachedCart([inrLine]);
     expect(secureStoreMock.setItemAsync).toHaveBeenCalledWith(
       "digital_advert.cart_cache",
-      JSON.stringify([validLine]),
+      JSON.stringify([inrLine]),
     );
 
     const loaded = await loadCachedCart();
-    expect(loaded).toEqual([validLine]);
+    expect(loaded).toEqual([inrLine]);
+  });
+
+  it("migrates legacy USD currency to INR on load", async () => {
+    secureStoreMock.getItemAsync.mockResolvedValueOnce(JSON.stringify([validLine]));
+
+    const loaded = await loadCachedCart();
+    expect(loaded[0]?.service.currency).toBe("INR");
   });
 
   it("returns empty array for invalid payload", async () => {

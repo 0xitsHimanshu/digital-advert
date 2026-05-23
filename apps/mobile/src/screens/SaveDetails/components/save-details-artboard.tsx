@@ -229,7 +229,7 @@ export function SaveDetailsArtboard({
             style={{
               width: footerScreenW,
               height: footerScreenH,
-              backgroundColor: "rgba(17,17,17,0.08)",
+              backgroundColor: "#11111114",
             }}
           />
         </MaskedView>
