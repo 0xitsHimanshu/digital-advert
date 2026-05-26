@@ -40,6 +40,8 @@ export function createApp(): Application {
         "/api/auth/refresh",
         "/api/auth/logout",
         "/api/profile/me",
+        "/api/profile/cart-sync",
+        "/api/profile/activity",
         "/api/services",
         "/api/services/:id",
         "/api/payments/create-order",

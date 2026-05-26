@@ -4,6 +4,7 @@ import { Router, type IRouter } from "express";
 
 import { priceCart, type CartLineInput } from "../lib/cart-pricing.js";
 import { getCustomerProfile } from "../lib/customer-profiles.js";
+import { recordCouponRedemption } from "../lib/firestore-coupons.js";
 import { buildDefaultOrderUpdates } from "../lib/order-updates.js";
 import {
   createPaymentOrder,
@@ -68,7 +69,12 @@ paymentsRouter.get("/orders/:orderId", async (req, res, next) => {
           order.razorpayPaymentId,
         );
         paymentMethod = resolved;
-        if (order.status === "PAID" && resolved !== order.paymentMethod) {
+        if (
+          order.status === "PAID" &&
+          typeof resolved === "string" &&
+          resolved &&
+          resolved !== order.paymentMethod
+        ) {
           await updatePaymentOrder(customerId, orderId, { paymentMethod: resolved });
         }
       } catch {
@@ -173,6 +179,7 @@ paymentsRouter.post("/create-order", async (req, res, next) => {
       subtotalCents: priced.subtotalCents,
       discountCents: priced.discountCents,
       taxCents: priced.taxCents,
+      ...(couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
     });
 
     res.json({
@@ -279,6 +286,10 @@ paymentsRouter.post("/verify", async (req, res, next) => {
       paymentMethod,
       updates: buildDefaultOrderUpdates(profile?.phoneNumber),
     });
+
+    if (order.couponCode) {
+      await recordCouponRedemption(order.couponCode, customerId);
+    }
 
     res.json({
       success: true,

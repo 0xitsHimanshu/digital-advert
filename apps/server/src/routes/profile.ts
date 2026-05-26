@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import { appendActivityLog } from "../lib/activity-logs.js";
+import { upsertCustomerCartSnapshot } from "../lib/customer-carts.js";
 import {
   getCustomerProfile,
   isProfileComplete,
@@ -91,6 +93,57 @@ profileRouter.put("/me", async (req, res, next) => {
       profile,
       profileComplete: isProfileComplete(profile),
     });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Sync cart snapshot for admin abandonment tracking. */
+profileRouter.post("/cart-sync", async (req, res, next) => {
+  try {
+    const customerId = req.customer!.sub;
+    const lines = Array.isArray(req.body?.lines) ? req.body.lines : [];
+    const currency = typeof req.body?.currency === "string" ? req.body.currency : "INR";
+    const estimatedTotalCents =
+      typeof req.body?.estimatedTotalCents === "number"
+        ? req.body.estimatedTotalCents
+        : 0;
+
+    const profile = await getCustomerProfile(customerId);
+    await upsertCustomerCartSnapshot({
+      customerId,
+      lines,
+      currency,
+      estimatedTotalCents,
+      contactEmail: profile?.email,
+      contactPhone: profile?.phoneNumber,
+    });
+
+    await appendActivityLog(customerId, {
+      type: "cart_sync",
+      label: "Cart updated",
+      metadata: { itemCount: lines.length },
+    });
+
+    res.status(204).end();
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Record in-app activity for admin user detail view. */
+profileRouter.post("/activity", async (req, res, next) => {
+  try {
+    const customerId = req.customer!.sub;
+    const type = typeof req.body?.type === "string" ? req.body.type : "event";
+    const label = typeof req.body?.label === "string" ? req.body.label : "Activity";
+    const metadata =
+      req.body?.metadata && typeof req.body.metadata === "object"
+        ? req.body.metadata
+        : undefined;
+
+    await appendActivityLog(customerId, { type, label, metadata });
+    res.status(204).end();
   } catch (e) {
     next(e);
   }

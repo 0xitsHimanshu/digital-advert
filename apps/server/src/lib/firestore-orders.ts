@@ -3,6 +3,7 @@ import type { Firestore } from "firebase-admin/firestore";
 
 import type { PricedCartLine } from "./cart-pricing.js";
 import { getFirestoreDb, requireFirestoreDb } from "./firestore-db.js";
+import { stripUndefined } from "./firestore-sanitize.js";
 
 export type PaymentOrderStatus =
   | "CREATED"
@@ -34,6 +35,7 @@ export type PaymentOrder = {
   razorpayPaymentId?: string;
   paymentMethod?: string;
   updates?: OrderUpdate[];
+  couponCode?: string;
 };
 
 function parseOrderUpdates(raw: unknown): OrderUpdate[] {
@@ -96,6 +98,7 @@ function parseOrderDoc(
     paymentMethod:
       typeof data.paymentMethod === "string" ? data.paymentMethod : undefined,
     updates: parseOrderUpdates(data.updates),
+    couponCode: typeof data.couponCode === "string" ? data.couponCode : undefined,
   };
 }
 
@@ -176,7 +179,10 @@ export async function updatePaymentOrder(
   if (!current) return null;
 
   const next: PaymentOrder = { ...current, ...patch, id: orderId, customerId };
-  await ref.set(next, { merge: true });
+  await ref.set(
+    stripUndefined(next as unknown as Record<string, unknown>),
+    { merge: true },
+  );
   return next;
 }
 

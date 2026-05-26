@@ -1,4 +1,8 @@
 import { getCatalogService } from "./catalog-services.js";
+import {
+  computeCouponDiscountCents,
+  getCouponByCode,
+} from "./firestore-coupons.js";
 
 export const CART_TAX_RATE = 0.18;
 
@@ -24,22 +28,31 @@ export type CartPricing = {
   totalCents: number;
 };
 
-function computeDiscountCents(
+/** Legacy hardcoded coupons when Firestore has no matching doc. */
+function legacyDiscountCents(subtotalCents: number, code: string): number {
+  if (code === "WELCOME10") return Math.round(subtotalCents * 0.1);
+  if (code === "SAVE50") return subtotalCents >= 30000 ? 5000 : 0;
+  if (code === "BUNDLE15") return Math.round(subtotalCents * 0.15);
+  return 0;
+}
+
+async function computeDiscountCents(
   subtotalCents: number,
   couponCode: string | undefined,
   adDiscountUnlocked: boolean,
-): number {
+): Promise<number> {
   if (subtotalCents <= 0) return 0;
 
   let discount = 0;
   const code = couponCode?.trim().toUpperCase();
 
-  if (code === "WELCOME10") {
-    discount = Math.round(subtotalCents * 0.1);
-  } else if (code === "SAVE50") {
-    discount = subtotalCents >= 30000 ? 5000 : 0;
-  } else if (code === "BUNDLE15") {
-    discount = Math.round(subtotalCents * 0.15);
+  if (code) {
+    const firestoreCoupon = await getCouponByCode(code);
+    if (firestoreCoupon) {
+      discount = computeCouponDiscountCents(firestoreCoupon, subtotalCents);
+    } else {
+      discount = legacyDiscountCents(subtotalCents, code);
+    }
   }
 
   if (adDiscountUnlocked) {
@@ -89,7 +102,7 @@ export async function priceCart(
   }
 
   const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const discountCents = computeDiscountCents(
+  const discountCents = await computeDiscountCents(
     subtotalCents,
     options?.couponCode,
     options?.adDiscountUnlocked ?? false,
